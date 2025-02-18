@@ -12,25 +12,7 @@
     <thead>
       <th>h</th>
     </thead>
-    <tbody id="TABLE_BODY" hx-get="/api/data/get" hx-target="#TABLE_BODY" hx-trigger="load">
-
-    </tbody>
+    <tbody id="TABLE_BODY" hx-get="/api/data/get" hx-target="#TABLE_BODY" hx-trigger="load, every 5s" ></tbody>
   </table>
-  <script>
-    async function testEventSource() {
-      const url = new URL('/evsource');
-      url.searchParams.append('date.from',(new Date()-10000).toDateString());
-      url.searchParams.append('date.to',(new Date()).toDateString());
-      const es = new EventSource(url);
-      es.addEventListener('open', (ev)=>{
-        console.log(ev);
-      });
-      es.addEventListener('message', (ev) => {
-        console.log(ev.data);
-        document.getElementById('TABLE_BODY').innerHTML += ev.data;
-      });
-      es.addEventListener('error', es.close);
-    }
-  </script>
 </body>
 </html>
