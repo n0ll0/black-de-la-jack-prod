@@ -64,65 +64,43 @@ struct DB
 };
 
 struct DB db = {0};  // Initialize DB with zero length
-// int save_data(struct mg_str body) {
-//   printf("Received body: %s\n", body.buf);
-//   printf("Body length: %zu\n", body.len); // ADDED: Print body length
-//   printf("First 16 bytes of body (hex): "); // ADDED: Hex dump of first 16 bytes
-//   for (size_t i = 0; i < body.len && i < 16; ++i) {
-//       printf("%02x ", (unsigned char)body.buf[i]);
-//   }
-//   printf("\n");
-
-//   if (db.len >= 1024) {
-//       return -1;  // Buffer full
-//   }
-
-//   struct record new_record;
-
-//   // Extract numerical values
-//   double date;
-//   if (!mg_json_get_num(body, "date", &date)) {
-//       printf("Error: failed to parse date\n");
-//       return 1;
-//   }
-//   new_record.date = (int)date;
-
-//   if (!mg_json_get_num(body, "temperature", &new_record.temperature)) {
-//       printf("Error: failed to parse temperature\n");
-//       return 2;  // Error parsing temperature
-//   }
-
-//   if (!mg_json_get_num(body, "humidity", &new_record.humidity)) {
-//       printf("Error: failed to parse humidity\n");
-//       return 3;  // Error parsing humidity
-//   }
-
-//   // Add the new record to the buffer
-//   db.buf[db.len++] = new_record;
-
-//   return 0;  // Success
-// }
 int save_data(struct mg_str body) {
-  printf("--- Minimal Debugging save_data (String Test - Corrected Again) ---\n");
+  printf("Received body: %s\n", body.buf);
+  printf("Body length: %zu\n", body.len); // ADDED: Print body length
+  printf("First 16 bytes of body (hex): "); // ADDED: Hex dump of first 16 bytes
+  for (size_t i = 0; i < body.len && i < 16; ++i) {
+      printf("%02x ", (unsigned char)body.buf[i]);
+  }
+  printf("\n");
 
-  struct mg_str json_string = mg_str_s("{\"value\":\"test_string\"}"); // JSON with string value
-
-  char *parsed_string_ptr = mg_json_get_str(json_string, "value"); // Correct call to mg_json_get_str
-
-  bool parse_result = (parsed_string_ptr != NULL);
-
-  printf("JSON String: %.*s\n", (int)json_string.len, json_string.buf);
-  printf("Parse Result: %s\n", parse_result ? "true" : "false");
-
-  if (parse_result) {
-      printf("Parsed String Value: %s\n", parsed_string_ptr); // Print the parsed string
-      free(parsed_string_ptr); // Important: Free the memory allocated by mg_json_get_str
-  } else {
-      printf("Error: failed to parse string value (minimal test - corrected again)\n");
+  if (db.len >= 1024) {
+      return -1;  // Buffer full
   }
 
-  printf("--- End of Minimal Debugging (String Test - Corrected Again) ---\n");
-  return 0;
+  struct record new_record;
+
+  // Extract numerical values
+  double date;
+  if (!mg_json_get_num(body, "date", &date)) {
+      printf("Error: failed to parse date\n");
+      return 1;
+  }
+  new_record.date = (int)date;
+
+  if (!mg_json_get_num(body, "temperature", &new_record.temperature)) {
+      printf("Error: failed to parse temperature\n");
+      return 2;  // Error parsing temperature
+  }
+
+  if (!mg_json_get_num(body, "humidity", &new_record.humidity)) {
+      printf("Error: failed to parse humidity\n");
+      return 3;  // Error parsing humidity
+  }
+
+  // Add the new record to the buffer
+  db.buf[db.len++] = new_record;
+
+  return 0;  // Success
 }
 
 char *get_data_as_html() {
