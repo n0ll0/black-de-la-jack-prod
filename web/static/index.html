@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Indoors climate station</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/2.0.4/htmx.min.js" integrity="sha512-2kIcAizYXhIn8TzUvqzEDZNuDZ+aW7yE/+f1HJHXFjQcGNfv1kqzJSTBRBSlOgp6B/KZsz1K0a3ZTqP9dnxioQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
   <table>
     <thead>
-
+      <th>h</th>
     </thead>
-    <tbody id="TABLE_BODY">
+    <tbody id="TABLE_BODY" hx-get="/api/data/get" hx-target="#TABLE_BODY" hx-trigger="load">
 
     </tbody>
   </table>

@@ -73,7 +73,7 @@ static void cb(struct mg_connection *c, int ev, void *ev_data) {
         mg_http_reply(c, 400, NULL, "nichts gut\n");
       } else {
         // Serve data creation
-        sprintf(data, "%s", hm->body.buf);
+        sprintf(data, "%s <tr><td>%s</td></tr>", data, hm->body.buf);
         mg_http_reply(c, 200, NULL, "sehr gut\n");
       }
     } else {
