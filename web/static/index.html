@@ -7,7 +7,14 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <%TABLE%>
+  <table>
+    <thead>
+
+    </thead>
+    <tbody id="TABLE_BODY">
+
+    </tbody>
+  </table>
   <script>
     async function testEventSource() {
       const url = new URL('/evsource');
@@ -19,6 +26,7 @@
       });
       es.addEventListener('message', (ev) => {
         console.log(ev.data);
+        document.getElementById('TABLE_BODY').innerHTML += ev.data;
       });
       es.addEventListener('error', es.close);
     }
