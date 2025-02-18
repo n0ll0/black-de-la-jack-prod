@@ -4,8 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Indoors climate station</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  
+  <%TABLE%>
+  <script>
+    async function testEventSource() {
+      const url = new URL('/evsource');
+      url.searchParams.append('date.from',(new Date()-10000).toDateString());
+      url.searchParams.append('date.to',(new Date()).toDateString());
+      const es = new EventSource(url);
+      es.addEventListener('open', (ev)=>{
+        console.log(ev);
+      });
+      es.addEventListener('message', (ev) => {
+        console.log(ev.data);
+      });
+      es.addEventListener('error', es.close);
+    }
+  </script>
 </body>
 </html>
