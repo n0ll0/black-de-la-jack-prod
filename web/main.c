@@ -10,7 +10,7 @@ static const char *s_addr1 = "http://0.0.0.0:8000";
 static const char *s_addr2 = "https://0.0.0.0:8443";
 static const char *s_enable_hexdump = "no";
 static const char *s_ssi_pattern = "#.html";
-static const char *s_upload_dir = NULL;  // File uploads disabled by default
+static const char *s_upload_dir = NULL; // File uploads disabled by default
 
 // Self signed certificates, see
 // https://github.com/cesanta/mongoose/blob/master/test/certs/generate.sh
@@ -45,15 +45,116 @@ static const char *s_tls_key =
 
 // Handle interrupts, like Ctrl-C
 static int s_signo;
-static void signal_handler(int signo) {
+static void signal_handler(int signo)
+{
   s_signo = signo;
 }
-char data[1024];
+
+struct record
+{
+  double temperature;
+  double humidity;
+  int date;
+};
+
+struct DB
+{
+  size_t len;
+  struct record buf[1024];
+};
+
+struct DB db = {0};  // Initialize DB with zero length
+// int save_data(struct mg_str body) {
+//   printf("Received body: %s\n", body.buf);
+//   printf("Body length: %zu\n", body.len); // ADDED: Print body length
+//   printf("First 16 bytes of body (hex): "); // ADDED: Hex dump of first 16 bytes
+//   for (size_t i = 0; i < body.len && i < 16; ++i) {
+//       printf("%02x ", (unsigned char)body.buf[i]);
+//   }
+//   printf("\n");
+
+//   if (db.len >= 1024) {
+//       return -1;  // Buffer full
+//   }
+
+//   struct record new_record;
+
+//   // Extract numerical values
+//   double date;
+//   if (!mg_json_get_num(body, "date", &date)) {
+//       printf("Error: failed to parse date\n");
+//       return 1;
+//   }
+//   new_record.date = (int)date;
+
+//   if (!mg_json_get_num(body, "temperature", &new_record.temperature)) {
+//       printf("Error: failed to parse temperature\n");
+//       return 2;  // Error parsing temperature
+//   }
+
+//   if (!mg_json_get_num(body, "humidity", &new_record.humidity)) {
+//       printf("Error: failed to parse humidity\n");
+//       return 3;  // Error parsing humidity
+//   }
+
+//   // Add the new record to the buffer
+//   db.buf[db.len++] = new_record;
+
+//   return 0;  // Success
+// }
+int save_data(struct mg_str body) {
+  printf("--- Minimal Debugging save_data (String Test - Corrected Again) ---\n");
+
+  struct mg_str json_string = mg_str_s("{\"value\":\"test_string\"}"); // JSON with string value
+
+  char *parsed_string_ptr = mg_json_get_str(json_string, "value"); // Correct call to mg_json_get_str
+
+  bool parse_result = (parsed_string_ptr != NULL);
+
+  printf("JSON String: %.*s\n", (int)json_string.len, json_string.buf);
+  printf("Parse Result: %s\n", parse_result ? "true" : "false");
+
+  if (parse_result) {
+      printf("Parsed String Value: %s\n", parsed_string_ptr); // Print the parsed string
+      free(parsed_string_ptr); // Important: Free the memory allocated by mg_json_get_str
+  } else {
+      printf("Error: failed to parse string value (minimal test - corrected again)\n");
+  }
+
+  printf("--- End of Minimal Debugging (String Test - Corrected Again) ---\n");
+  return 0;
+}
+
+char *get_data_as_html() {
+  size_t data_size = 1024;
+  char *data = malloc(data_size);
+  if (data == NULL) {
+    return NULL;  // Error allocating memory
+  }
+
+  for (size_t i = 0; i < db.len; ++i) {
+    char row[256];
+    snprintf(row, sizeof(row), "<tr><td>%d</td><td>%lf</td><td>%lf</td></tr>", db.buf[i].date, db.buf[i].temperature, db.buf[i].humidity);
+    
+    if (strlen(data) + strlen(row) + 1 > data_size) {
+      data_size *= 2;
+      data = realloc(data, data_size);
+      if (data == NULL) {
+        return NULL;  // Error reallocating memory
+      }
+    }
+    strcat(data, row);
+  }
+
+  return data;
+}
 
 // Event handler for the listening connection.
 // Simply serve static files from `s_root_dir`
-static void cb(struct mg_connection *c, int ev, void *ev_data) {
-  if (ev == MG_EV_ACCEPT && c->fn_data != NULL) {
+static void cb(struct mg_connection *c, int ev, void *ev_data)
+{
+  if (ev == MG_EV_ACCEPT && c->fn_data != NULL)
+  {
     struct mg_tls_opts opts;
     memset(&opts, 0, sizeof(opts));
 #ifdef TLS_TWOWAY
@@ -63,20 +164,37 @@ static void cb(struct mg_connection *c, int ev, void *ev_data) {
     opts.key = mg_str(s_tls_key);
     mg_tls_init(c, &opts);
   }
-  if (ev == MG_EV_HTTP_MSG) {
+  if (ev == MG_EV_HTTP_MSG)
+  {
     struct mg_http_message *hm = ev_data;
-    if (mg_match(hm->uri, mg_str("/api/data/get"), NULL)) {
-      mg_http_reply(c, 200, NULL, data);
-    } else if (mg_match(hm->uri, mg_str("/api/data/create"), NULL)) {
-      struct mg_str accept_header = *mg_http_get_header(hm, "accept");
-      if (!mg_strcmp(accept_header, mg_str_s("application/json"))) {
+    if (mg_match(hm->uri, mg_str("/api/data/get"), NULL))
+    {
+
+      mg_http_reply(c, 200, NULL, get_data_as_html());
+    }
+    else if (mg_match(hm->uri, mg_str("/api/data/create"), NULL))
+    {
+      struct mg_str content_type_header = *mg_http_get_header(hm, "Content-Type");
+      if (mg_strcmp(content_type_header, mg_str_s("application/json")) != 0)
+      {
         mg_http_reply(c, 400, NULL, "nichts gut\n");
-      } else {
-        // Serve data creation
-        sprintf(data, "%s <tr><td>%s</td></tr>", data, hm->body.buf);
-        mg_http_reply(c, 200, NULL, "sehr gut\n");
       }
-    } else {
+      else
+      {
+        int saved = save_data(hm->body);
+        MG_LOG(MG_LL_INFO,("\n%d\n", saved));
+        if (saved != 0)
+        {
+          mg_http_reply(c, 500, NULL, "couldn't save data\n");
+        }
+        else
+        {
+          mg_http_reply(c, 200, NULL, "data saved successfully\n");
+        }
+      }
+    }
+    else
+    {
       // Serve web root directory
       struct mg_http_serve_opts opts = {0};
       opts.root_dir = s_root_dir;
@@ -91,7 +209,8 @@ static void cb(struct mg_connection *c, int ev, void *ev_data) {
   }
 }
 
-static void usage(const char *prog) {
+static void usage(const char *prog)
+{
   fprintf(stderr,
           "Mongoose v.%s\n"
           "Usage: %s OPTIONS\n"
@@ -106,36 +225,54 @@ static void usage(const char *prog) {
   exit(EXIT_FAILURE);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   char path[MG_PATH_MAX] = ".";
   struct mg_mgr mgr;
   struct mg_connection *c;
   int i;
-
+  db.len = 0;
   // Parse command-line flags
-  for (i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-d") == 0) {
+  for (i = 1; i < argc; i++)
+  {
+    if (strcmp(argv[i], "-d") == 0)
+    {
       s_root_dir = argv[++i];
-    } else if (strcmp(argv[i], "-H") == 0) {
+    }
+    else if (strcmp(argv[i], "-H") == 0)
+    {
       s_enable_hexdump = argv[++i];
-    } else if (strcmp(argv[i], "-S") == 0) {
+    }
+    else if (strcmp(argv[i], "-S") == 0)
+    {
       s_ssi_pattern = argv[++i];
-    } else if (strcmp(argv[i], "-l") == 0) {
+    }
+    else if (strcmp(argv[i], "-l") == 0)
+    {
       s_addr1 = argv[++i];
-    } else if (strcmp(argv[i], "-l2") == 0) {
+    }
+    else if (strcmp(argv[i], "-l2") == 0)
+    {
       s_addr2 = argv[++i];
-    } else if (strcmp(argv[i], "-u") == 0) {
+    }
+    else if (strcmp(argv[i], "-u") == 0)
+    {
       s_upload_dir = argv[++i];
-    } else if (strcmp(argv[i], "-v") == 0) {
+    }
+    else if (strcmp(argv[i], "-v") == 0)
+    {
       s_debug_level = atoi(argv[++i]);
-    } else {
+    }
+    else
+    {
       usage(argv[0]);
     }
   }
 
   // Root directory must not contain double dots. Make it absolute
   // Do the conversion only if the root dir spec does not contain overrides
-  if (strchr(s_root_dir, ',') == NULL) {
+  if (strchr(s_root_dir, ',') == NULL)
+  {
     realpath(s_root_dir, path);
     s_root_dir = path;
   }
@@ -145,17 +282,20 @@ int main(int argc, char *argv[]) {
   signal(SIGTERM, signal_handler);
   mg_log_set(s_debug_level);
   mg_mgr_init(&mgr);
-  if ((c = mg_http_listen(&mgr, s_addr1, cb, NULL)) == NULL) {
+  if ((c = mg_http_listen(&mgr, s_addr1, cb, NULL)) == NULL)
+  {
     MG_ERROR(("Cannot listen on %s. Use http://ADDR:PORT or :PORT",
               s_addr1));
     exit(EXIT_FAILURE);
   }
-  if ((c = mg_http_listen(&mgr, s_addr2, cb, (void *) 1)) == NULL) {
+  if ((c = mg_http_listen(&mgr, s_addr2, cb, (void *)1)) == NULL)
+  {
     MG_ERROR(("Cannot listen on %s. Use http://ADDR:PORT or :PORT",
               s_addr2));
     exit(EXIT_FAILURE);
   }
-  if (mg_casecmp(s_enable_hexdump, "yes") == 0) c->is_hexdumping = 1;
+  if (mg_casecmp(s_enable_hexdump, "yes") == 0)
+    c->is_hexdumping = 1;
 
   // Start infinite event loop
   MG_INFO(("Mongoose version : v%s", MG_VERSION));
@@ -163,7 +303,8 @@ int main(int argc, char *argv[]) {
   MG_INFO(("HTTPS listener   : %s", s_addr2));
   MG_INFO(("Web root         : [%s]", s_root_dir));
   MG_INFO(("Upload dir       : [%s]", s_upload_dir ? s_upload_dir : "unset"));
-  while (s_signo == 0) mg_mgr_poll(&mgr, 1000);
+  while (s_signo == 0)
+    mg_mgr_poll(&mgr, 1000);
   mg_mgr_free(&mgr);
   MG_INFO(("Exiting on signal %d", s_signo));
   return 0;
