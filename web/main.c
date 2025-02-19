@@ -56,7 +56,7 @@ struct record
 {
   double temperature;
   double humidity;
-  int date;
+  double date;
 };
 
 sqlite3 *db;
@@ -79,7 +79,7 @@ int save_data(struct mg_str body) {
   struct record {
     double temperature;
     double humidity;
-    int date;
+    double date;
   } new_record;
 
   // Parse the JSON using cJSON
@@ -96,7 +96,7 @@ int save_data(struct mg_str body) {
     cJSON_Delete(root);
     return 1;
   }
-  new_record.date = date_item->valueint;
+  new_record.date = date_item->valuedouble;
 
   // Extract "temperature"
   cJSON *temp_item = cJSON_GetObjectItemCaseSensitive(root, "temperature");
@@ -121,7 +121,7 @@ int save_data(struct mg_str body) {
   // (sqlite3_prepare_v2 and sqlite3_bind_*) to avoid SQL injection.
   char sql[256];
   snprintf(sql, sizeof(sql),
-           "INSERT INTO sensor_data (date, temperature, humidity) VALUES (%d, %f, %f);",
+           "INSERT INTO sensor_data (date, temperature, humidity) VALUES (%lf, %lf, %lf);",
            new_record.date, new_record.temperature, new_record.humidity);
 
   char *err_msg = NULL;
@@ -137,6 +137,7 @@ int save_data(struct mg_str body) {
   cJSON_Delete(root);
   return 0; // Success
 }
+
 int html_callback(void *data, int argc, char **argv, char **azColName)
 {
   char row[256];
@@ -145,11 +146,12 @@ int html_callback(void *data, int argc, char **argv, char **azColName)
   strcat((char *)data, row); // Append the row to the data string.
   return 0;
 }
+
 char *get_data_as_html()
 {
   char *err_msg = 0;
-  char sql[256] = "SELECT date, temperature, humidity FROM sensor_data;";
-  char *data = malloc(1024); // Initial size, will realloc if needed
+  char sql[53] = "SELECT date, temperature, humidity FROM sensor_data;";
+  char *data = malloc(2024); // Initial size, will realloc if needed
   if (data == NULL)
     return NULL;
   data[0] = '\0'; // Initialize as empty string
@@ -262,7 +264,7 @@ int main(int argc, char *argv[])
   }
 
   // char *err_msg = 0;
-  const char *create_table_sql = "CREATE TABLE IF NOT EXISTS sensor_data (date INTEGER, temperature REAL, humidity REAL);";
+  const char *create_table_sql = "CREATE TABLE IF NOT EXISTS sensor_data (date REAL, temperature REAL, humidity REAL);";
   rc = sqlite3_exec(db, create_table_sql, 0, 0, &err_msg);
 
   if (rc != SQLITE_OK)
