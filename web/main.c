@@ -3,6 +3,8 @@
 
 #include <signal.h>
 #include "mongoose.h"
+#include <sqlite3.h>
+#include "cJSON.h"
 
 static int s_debug_level = MG_LL_INFO;
 static const char *s_root_dir = "./static/";
@@ -57,71 +59,110 @@ struct record
   int date;
 };
 
-struct DB
-{
-  size_t len;
-  struct record buf[1024];
-};
+sqlite3 *db;
 
-struct DB* db;  // Initialize DB with zero length
 int save_data(struct mg_str body) {
-  printf("Received body: %s\n", body.buf);
-  printf("Body length: %zu\n", body.len); // ADDED: Print body length
-  printf("First 16 bytes of body (hex): "); // ADDED: Hex dump of first 16 bytes
-  for (size_t i = 0; i < body.len && i < 16; ++i) {
-      printf("%02x ", (unsigned char)body.buf[i]);
+  // Print the received JSON body
+  printf("Received body: %.*s\n", (int)body.len, body.buf);
+  printf("Body length: %zu\n", body.len);
+
+  // Copy JSON into a local buffer and ensure it's null-terminated
+  char json_buf[1024];
+  if (body.len >= sizeof(json_buf)) {
+    fprintf(stderr, "Error: JSON body too large\n");
+    return 5;
   }
-  printf("\n");
+  memcpy(json_buf, body.buf, body.len);
+  json_buf[body.len] = '\0';
 
-  if (db->len >= 1024) {
-      return -1;  // Buffer full
-  }
+  // Define a structure to hold our record data
+  struct record {
+    double temperature;
+    double humidity;
+    int date;
+  } new_record;
 
-  struct record new_record;
-
-  // Extract numerical values
-  double date;
-  if (!mg_json_get_num(body, "date", &date)) {
-      printf("Error: failed to parse date\n");
-      return 1;
-  }
-  new_record.date = (int)date;
-
-  if (!mg_json_get_num(body, "temperature", &new_record.temperature)) {
-      printf("Error: failed to parse temperature\n");
-      return 2;  // Error parsing temperature
-  }
-
-  if (!mg_json_get_num(body, "humidity", &new_record.humidity)) {
-      printf("Error: failed to parse humidity\n");
-      return 3;  // Error parsing humidity
+  // Parse the JSON using cJSON
+  cJSON *root = cJSON_Parse(json_buf);
+  if (!root) {
+    fprintf(stderr, "Error: failed to parse JSON\n");
+    return 1;
   }
 
-  // Add the new record to the buffer
-  db->buf[db->len++] = new_record;
+  // Extract "date"
+  cJSON *date_item = cJSON_GetObjectItemCaseSensitive(root, "date");
+  if (!cJSON_IsNumber(date_item)) {
+    fprintf(stderr, "Error: failed to parse date\n");
+    cJSON_Delete(root);
+    return 1;
+  }
+  new_record.date = date_item->valueint;
 
-  return 0;  // Success
+  // Extract "temperature"
+  cJSON *temp_item = cJSON_GetObjectItemCaseSensitive(root, "temperature");
+  if (!cJSON_IsNumber(temp_item)) {
+    fprintf(stderr, "Error: failed to parse temperature\n");
+    cJSON_Delete(root);
+    return 2;
+  }
+  new_record.temperature = temp_item->valuedouble;
+
+  // Extract "humidity"
+  cJSON *humidity_item = cJSON_GetObjectItemCaseSensitive(root, "humidity");
+  if (!cJSON_IsNumber(humidity_item)) {
+    fprintf(stderr, "Error: failed to parse humidity\n");
+    cJSON_Delete(root);
+    return 3;
+  }
+  new_record.humidity = humidity_item->valuedouble;
+
+  // Build the SQL query string.
+  // NOTE: For production, consider using SQLite's prepared statements
+  // (sqlite3_prepare_v2 and sqlite3_bind_*) to avoid SQL injection.
+  char sql[256];
+  snprintf(sql, sizeof(sql),
+           "INSERT INTO sensor_data (date, temperature, humidity) VALUES (%d, %f, %f);",
+           new_record.date, new_record.temperature, new_record.humidity);
+
+  char *err_msg = NULL;
+  int rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "SQL error: %s\n", err_msg);
+    sqlite3_free(err_msg);
+    cJSON_Delete(root);
+    return 4;
+  }
+
+  // Clean up cJSON object
+  cJSON_Delete(root);
+  return 0; // Success
 }
+int html_callback(void *data, int argc, char **argv, char **azColName)
+{
+  char row[256];
+  snprintf(row, sizeof(row), "<tr><td>%s</td><td>%s</td><td>%s</td></tr>",
+           argv[0], argv[1], argv[2]);
+  strcat((char *)data, row); // Append the row to the data string.
+  return 0;
+}
+char *get_data_as_html()
+{
+  char *err_msg = 0;
+  char sql[256] = "SELECT date, temperature, humidity FROM sensor_data;";
+  char *data = malloc(1024); // Initial size, will realloc if needed
+  if (data == NULL)
+    return NULL;
+  data[0] = '\0'; // Initialize as empty string
 
-char *get_data_as_html() {
-  size_t data_size = 1024;
-  char *data = malloc(data_size);
-  if (data == NULL) {
-    return NULL;  // Error allocating memory
-  }
+  // Later, call sqlite3_exec with the callback:
+  int rc = sqlite3_exec(db, sql, html_callback, data, &err_msg);
 
-  for (size_t i = 0; i < db->len; ++i) {
-    char row[256];
-    sprintf(row, "<tr><td>%d</td><td>%lf</td><td>%lf</td></tr>", db->buf[i].date, db->buf[i].temperature, db->buf[i].humidity);
-    
-    if (strlen(data) + strlen(row) + 1 > data_size) {
-      data_size *= 2;
-      data = realloc(data, data_size);
-      if (data == NULL) {
-        return NULL;  // Error reallocating memory
-      }
-    }
-    strcat(data, row);
+  if (rc != SQLITE_OK)
+  {
+    fprintf(stderr, "SQL error: %s\n", err_msg);
+    sqlite3_free(err_msg);
+    free(data);
+    return NULL;
   }
 
   return data;
@@ -160,7 +201,7 @@ static void cb(struct mg_connection *c, int ev, void *ev_data)
       else
       {
         int saved = save_data(hm->body);
-        MG_LOG(MG_LL_INFO,("\n%d\n", saved));
+        MG_LOG(MG_LL_INFO, ("\n%d\n", saved));
         if (saved != 0)
         {
           mg_http_reply(c, 500, NULL, "couldn't save data\n");
@@ -208,11 +249,31 @@ int main(int argc, char *argv[])
   char path[MG_PATH_MAX] = ".";
   struct mg_mgr mgr;
   struct mg_connection *c;
-  int i;
-  db = malloc(sizeof(struct DB));
-  (*db) = (struct DB){0};
+  char *err_msg = 0;
+  int rc;
+
+  const char *db_path = "./database.db"; // Corrected typo here
+
+  rc = sqlite3_open(db_path, &db);
+  if (rc != SQLITE_OK)
+  {
+    fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
+    return 1; // Exit with error code
+  }
+
+  // char *err_msg = 0;
+  const char *create_table_sql = "CREATE TABLE IF NOT EXISTS sensor_data (date INTEGER, temperature REAL, humidity REAL);";
+  rc = sqlite3_exec(db, create_table_sql, 0, 0, &err_msg);
+
+  if (rc != SQLITE_OK)
+  {
+    fprintf(stderr, "SQL error: %s\n", err_msg);
+    sqlite3_free(err_msg);
+    sqlite3_close(db);
+    return 1;
+  }
   // Parse command-line flags
-  for (i = 1; i < argc; i++)
+  for (int i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "-d") == 0)
     {
@@ -284,6 +345,7 @@ int main(int argc, char *argv[])
   MG_INFO(("Upload dir       : [%s]", s_upload_dir ? s_upload_dir : "unset"));
   while (s_signo == 0)
     mg_mgr_poll(&mgr, 1000);
+  sqlite3_close(db);
   mg_mgr_free(&mgr);
   MG_INFO(("Exiting on signal %d", s_signo));
   return 0;
