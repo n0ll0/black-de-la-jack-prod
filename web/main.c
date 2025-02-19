@@ -63,7 +63,7 @@ struct DB
   struct record buf[1024];
 };
 
-struct DB db = {0};  // Initialize DB with zero length
+struct DB* db;  // Initialize DB with zero length
 int save_data(struct mg_str body) {
   printf("Received body: %s\n", body.buf);
   printf("Body length: %zu\n", body.len); // ADDED: Print body length
@@ -73,7 +73,7 @@ int save_data(struct mg_str body) {
   }
   printf("\n");
 
-  if (db.len >= 1024) {
+  if (db->len >= 1024) {
       return -1;  // Buffer full
   }
 
@@ -98,7 +98,7 @@ int save_data(struct mg_str body) {
   }
 
   // Add the new record to the buffer
-  db.buf[db.len++] = new_record;
+  db->buf[db->len++] = new_record;
 
   return 0;  // Success
 }
@@ -110,9 +110,9 @@ char *get_data_as_html() {
     return NULL;  // Error allocating memory
   }
 
-  for (size_t i = 0; i < db.len; ++i) {
+  for (size_t i = 0; i < db->len; ++i) {
     char row[256];
-    snprintf(row, sizeof(row), "<tr><td>%d</td><td>%lf</td><td>%lf</td></tr>", db.buf[i].date, db.buf[i].temperature, db.buf[i].humidity);
+    sprintf(row, "<tr><td>%d</td><td>%lf</td><td>%lf</td></tr>", db->buf[i].date, db->buf[i].temperature, db->buf[i].humidity);
     
     if (strlen(data) + strlen(row) + 1 > data_size) {
       data_size *= 2;
@@ -209,7 +209,8 @@ int main(int argc, char *argv[])
   struct mg_mgr mgr;
   struct mg_connection *c;
   int i;
-  db.len = 0;
+  db = malloc(sizeof(struct DB));
+  (*db) = (struct DB){0};
   // Parse command-line flags
   for (i = 1; i < argc; i++)
   {
