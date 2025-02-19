@@ -61,38 +61,39 @@ struct record
 
 sqlite3 *db;
 
-int save_data(struct mg_str body) {
+int save_data(struct mg_str body)
+{
   // Print the received JSON body
   printf("Received body: %.*s\n", (int)body.len, body.buf);
   printf("Body length: %zu\n", body.len);
 
-  // Copy JSON into a local buffer and ensure it's null-terminated
-  char json_buf[1024];
-  if (body.len >= sizeof(json_buf)) {
-    fprintf(stderr, "Error: JSON body too large\n");
+  // Copy JSON into a dynamically allocated buffer
+  char *json_buf = malloc(body.len + 1);
+  if (json_buf == NULL)
+  {
+    fprintf(stderr, "Error: Memory allocation failed\n");
     return 5;
   }
   memcpy(json_buf, body.buf, body.len);
-  json_buf[body.len] = '\0';
+  json_buf[body.len] = '\0'; // Ensure null-terminated
 
   // Define a structure to hold our record data
-  struct record {
-    double temperature;
-    double humidity;
-    double date;
-  } new_record;
+  struct record new_record;
 
   // Parse the JSON using cJSON
   cJSON *root = cJSON_Parse(json_buf);
-  if (!root) {
-    fprintf(stderr, "Error: failed to parse JSON\n");
+  free(json_buf); // Free the JSON buffer after parsing
+  if (!root)
+  {
+    fprintf(stderr, "Error: Failed to parse JSON\n");
     return 1;
   }
 
   // Extract "date"
   cJSON *date_item = cJSON_GetObjectItemCaseSensitive(root, "date");
-  if (!cJSON_IsNumber(date_item)) {
-    fprintf(stderr, "Error: failed to parse date\n");
+  if (!cJSON_IsNumber(date_item))
+  {
+    fprintf(stderr, "Error: Failed to parse date\n");
     cJSON_Delete(root);
     return 1;
   }
@@ -100,8 +101,9 @@ int save_data(struct mg_str body) {
 
   // Extract "temperature"
   cJSON *temp_item = cJSON_GetObjectItemCaseSensitive(root, "temperature");
-  if (!cJSON_IsNumber(temp_item)) {
-    fprintf(stderr, "Error: failed to parse temperature\n");
+  if (!cJSON_IsNumber(temp_item))
+  {
+    fprintf(stderr, "Error: Failed to parse temperature\n");
     cJSON_Delete(root);
     return 2;
   }
@@ -109,16 +111,15 @@ int save_data(struct mg_str body) {
 
   // Extract "humidity"
   cJSON *humidity_item = cJSON_GetObjectItemCaseSensitive(root, "humidity");
-  if (!cJSON_IsNumber(humidity_item)) {
-    fprintf(stderr, "Error: failed to parse humidity\n");
+  if (!cJSON_IsNumber(humidity_item))
+  {
+    fprintf(stderr, "Error: Failed to parse humidity\n");
     cJSON_Delete(root);
     return 3;
   }
   new_record.humidity = humidity_item->valuedouble;
 
-  // Build the SQL query string.
-  // NOTE: For production, consider using SQLite's prepared statements
-  // (sqlite3_prepare_v2 and sqlite3_bind_*) to avoid SQL injection.
+  // Build the SQL query string using a dynamic buffer
   char sql[256];
   snprintf(sql, sizeof(sql),
            "INSERT INTO sensor_data (date, temperature, humidity) VALUES (%lf, %lf, %lf);",
@@ -126,7 +127,8 @@ int save_data(struct mg_str body) {
 
   char *err_msg = NULL;
   int rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK)
+  {
     fprintf(stderr, "SQL error: %s\n", err_msg);
     sqlite3_free(err_msg);
     cJSON_Delete(root);
@@ -138,36 +140,50 @@ int save_data(struct mg_str body) {
   return 0; // Success
 }
 
-int html_callback(void *data, int argc, char **argv, char **azColName)
-{
-  char row[256];
-  snprintf(row, sizeof(row), "<tr><td>%s</td><td>%s</td><td>%s</td></tr>",
-           argv[0], argv[1], argv[2]);
-  strcat((char *)data, row); // Append the row to the data string.
+int html_callback(void *data, int argc, char **argv, char **azColName) {
+  // Calculate the required size for the new row
+  size_t row_size = snprintf(NULL, 0, "<tr><td>%s</td><td>%s</td><td>%s</td></tr>", argv[0], argv[1], argv[2]) + 1;
+  
+  // Reallocate `data` to fit the new row
+  char **data_ptr = (char **)data;
+  size_t current_length = strlen(*data_ptr);
+  *data_ptr = realloc(*data_ptr, current_length + row_size);
+  if (*data_ptr == NULL) {
+    fprintf(stderr, "Error reallocating memory\n");
+    return 1; // Return a non-zero value to stop `sqlite3_exec`
+  }
+  
+  // Append the new row to `data`
+  sprintf(*data_ptr + current_length, "<tr><td>%s</td><td>%s</td><td>%s</td></tr>", argv[0], argv[1], argv[2]);
   return 0;
 }
 
-char *get_data_as_html()
-{
+char *get_data_as_html() {
   char *err_msg = 0;
-  char sql[53] = "SELECT date, temperature, humidity FROM sensor_data;";
-  char *data = malloc(2024); // Initial size, will realloc if needed
-  if (data == NULL)
+  char sql[256] = "SELECT date, temperature, humidity FROM sensor_data;";
+  
+  // Allocate initial memory for the data buffer
+  size_t initial_size = 1024;
+  char *data = malloc(initial_size);
+  if (data == NULL) {
+    fprintf(stderr, "Error allocating memory\n");
     return NULL;
-  data[0] = '\0'; // Initialize as empty string
+  }
+  data[0] = '\0'; // Initialize as an empty string
 
-  // Later, call sqlite3_exec with the callback:
-  int rc = sqlite3_exec(db, sql, html_callback, data, &err_msg);
+  // Use a pointer to the data buffer for easier reallocation in the callback
+  char *data_ptr = data;
 
-  if (rc != SQLITE_OK)
-  {
+  // Call sqlite3_exec with the callback
+  int rc = sqlite3_exec(db, sql, html_callback, &data_ptr, &err_msg);
+  if (rc != SQLITE_OK) {
     fprintf(stderr, "SQL error: %s\n", err_msg);
     sqlite3_free(err_msg);
-    free(data);
+    free(data_ptr);
     return NULL;
   }
 
-  return data;
+  return data_ptr;
 }
 
 // Event handler for the listening connection.
@@ -190,8 +206,9 @@ static void cb(struct mg_connection *c, int ev, void *ev_data)
     struct mg_http_message *hm = ev_data;
     if (mg_match(hm->uri, mg_str("/api/data/get"), NULL))
     {
-
-      mg_http_reply(c, 200, NULL, get_data_as_html());
+      char *data = get_data_as_html();
+      mg_http_reply(c, 200, NULL, data);
+      free(data);
     }
     else if (mg_match(hm->uri, mg_str("/api/data/create"), NULL))
     {
