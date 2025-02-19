@@ -1,7 +1,7 @@
 PROG ?= server.exe                   # Program we are building
 DELETE = rm -rf                   # Command to remove files
 OUT ?= -o $(PROG)                 # Compiler argument for output file
-SOURCES = main.c mongoose.c       # Source code files
+SOURCES = main.c mongoose.c cJSON.c cJSON_Utils.c      # Source code files
 CFLAGS = -W -Wall -Wextra -g #-I. # Build options
 #CFLAGS += -fsanitize=address,undefined,alignment
 LDFLAGS = -Wl,-L/usr/lib/x86_64-linux-gnu
