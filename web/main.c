@@ -121,7 +121,7 @@ int save_data(struct mg_str body)
 
   // Build the SQL query string using a dynamic buffer
   char sql[256];
-  snprintf(sql, sizeof(sql),
+  sprintf(sql,
            "INSERT INTO sensor_data (date, temperature, humidity) VALUES (%lf, %lf, %lf);",
            new_record.date, new_record.temperature, new_record.humidity);
 
@@ -160,11 +160,10 @@ int html_callback(void *data, int argc, char **argv, char **azColName) {
 
 char *get_data_as_html() {
   char *err_msg = 0;
-  char sql[256] = "SELECT date, temperature, humidity FROM sensor_data;";
+  char sql[256] = "SELECT date, temperature, humidity FROM sensor_data ORDER BY date DESC LIMIT 20;";
   
   // Allocate initial memory for the data buffer
-  size_t initial_size = 1024;
-  char *data = malloc(initial_size);
+  char *data = malloc(1024);
   if (data == NULL) {
     fprintf(stderr, "Error allocating memory\n");
     return NULL;
