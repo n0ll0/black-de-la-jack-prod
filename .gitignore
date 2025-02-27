@@ -3,3 +3,6 @@
 *.db
 rust_approach/
 .vscode/
+*/node_modules/
+*/target/
+*/package-lock.json
