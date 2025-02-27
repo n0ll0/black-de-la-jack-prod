@@ -1,0 +1,12 @@
+{
+  "name": "Black de la Jack",
+  "start_url": "/",
+  "display": "browser",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/Black de la jack.svg",
+      "type": "image/svg"
+    }
+  ]
+}

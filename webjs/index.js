@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 const PORT = process.env.PORT || 3000;
-const LIMIT = 100;
+const LIMIT = 30;
 const app = express();
 
 // Middleware
@@ -95,6 +95,7 @@ function getRecords(query) {
 // Serve main page
 app.get('/', async (req, res) => {
   try {
+    res.setHeader('Content-Type', 'text/html');
     res.locals.records = await getRecords(req.query);
     res.locals.query = req.query;
     res.render('index');
@@ -164,7 +165,21 @@ app.get('/api/records', async (req, res) => {
   }
 });
 
+// Function to get the local IP address
+function getLocalIPAddress() {
+  const interfaces = require('os').networkInterfaces();
+  for (const interfaceName in interfaces) {
+    const addresses = interfaces[interfaceName];
+    for (const address of addresses) {
+      if (address.family === 'IPv4' && !address.internal) {
+        return address.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server started at http://localhost:${PORT}`);
+module.exports = app.listen(PORT, () => {
+  console.log(`Server started at http://${getLocalIPAddress()}:${PORT}`);
 });
