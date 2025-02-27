@@ -1,0 +1,44 @@
+/* Use a clean, sans-serif font similar to Google's style */
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f5f5f5;
+  margin: 20px;
+  color: #202124;
+}
+
+/* Style for the main heading */
+h1 {
+  color: #202124;
+}
+
+/* Table container styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  margin-top: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Header styling */
+th {
+  background-color: #f1f3f4;
+  color: #5f6368;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #dadce0;
+}
+
+/* Cell styling */
+td {
+  font-size: 14px;
+  padding: 12px 15px;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+/* Add a subtle hover effect on rows */
+tr:hover td {
+  background-color: #f1f3f4;
+}
