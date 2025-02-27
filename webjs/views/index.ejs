@@ -1,73 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/styles.css">
-    <title>Black de la Jack</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Black de la Jack</title>
 </head>
 <body>
-    <h1>Black de la Jack</h1>
-    <p>Click the button to send some fake sensor data:</p>
-    <button onclick="sendData()">Send Data</button>
+  <h1>Black de la Jack</h1>
 
-    <table id="TABLE">
-      <thead>
+  <!-- Search Form -->
+  <form id="searchForm">
+    <label for="from">From Date:</label>
+    <input type="date" id="from" name="from" value="<%= locals.query?.from || '' %>">
+    <label for="to">To Date:</label>
+    <input type="date" id="to" name="to" value="<%= locals.query?.to || '' %>">
+    <label for="search">Text Search:</label>
+    <input type="search" id="search" name="search" placeholder="Enter search term" value="<%= locals.query?.search || '' %>">
+    <button type="submit">Search</button>
+  </form>
+
+  <!-- Button to simulate sending new sensor data -->
+  <p>Click the button to send some fake sensor data:</p>
+  <button onclick="sendData()">Send Data</button>
+
+  <!-- Data Table -->
+  <table id="TABLE">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Temperature</th>
+        <th>Humidity</th>
+        <th>Other</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% records.forEach(record => { %>
         <tr>
-          <th>date</th>
-          <th>temperature</th>
-          <th>humidity</th>
-          <th>other</th>
+          <td><%= new Date(record.date).toLocaleString() %></td>
+          <td><%= record.temperature.toFixed(2) %></td>
+          <td><%= record.humidity.toFixed(2) %></td>
+          <td><%= record.other || 'N/A' %></td>
         </tr>
-      </thead>
-      <tbody>
-        <% records.forEach(record => { %>
-          <tr>
-           <td><%= new Date(record.date).toLocaleString() %></td>
-           <td><%= record.temperature.toFixed(2) %></td>
-           <td><%= record.humidity.toFixed(2) %></td>
-           <td><%= record.other %></td>
-          </tr>
-         <% }) %>
-      </tbody>
-    </table>
+      <% }) %>
+    </tbody>
+  </table>
 
-    <script>
-        async function sendData() {
-            const data = {
-                date: new Date().toISOString(),
-                temperature: (Math.random() * 10 + 20),
-                humidity: (Math.random() * 20 + 50),
-                other: "Test Data"
-            };
+  <!-- Load More Button for infinite scrolling -->
+  <button id="loadMore">Load More</button>
 
-            const response = await fetch('/json', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+  <script>
+    // Function to send new sensor data
+    async function sendData() {
+      const data = {
+        date: new Date().toISOString(),
+        temperature: (Math.random() * 10 + 20),
+        humidity: (Math.random() * 20 + 50),
+        other: "Test Data"
+      };
 
-            const result = await response.text();
+      await fetch('/json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set up SSE connection for real-time updates
+      const eS = new EventSource('/events');
+      eS.onopen = () => console.log('SSE Connection established');
+      eS.onmessage = (event) => {
+        console.log('New SSE event:', event.data);
+        const data = JSON.parse(event.data);
+        const table = document.querySelector('#TABLE tbody');
+        const row = table.insertRow(0);
+        row.insertCell(0).innerHTML = new Date(data.date).toLocaleString();
+        row.insertCell(1).innerHTML = data.temperature.toFixed(2);
+        row.insertCell(2).innerHTML = data.humidity.toFixed(2);
+        row.insertCell(3).innerHTML = data.other;
+      };
+      eS.onerror = () => {
+        console.error("SSE error occurred");
+        eS.close();
+      };
+
+      // Infinite scrolling / "Load More" functionality
+      let offset = <%= records.length %>;
+      const limit = offset;
+      document.getElementById('loadMore').addEventListener('click', async () => {
+        const from = document.getElementById('from').value;
+        const to = document.getElementById('to').value;
+        const search = document.getElementById('search').value;
+        const params = new URLSearchParams({ offset, limit, from, to, search });
+        const response = await fetch('/api/records?' + params.toString());
+        if (response.ok) {
+          const newRecords = await response.json();
+          const tbody = document.querySelector('#TABLE tbody');
+          newRecords.forEach(record => {
+            const tr = tbody.insertRow();
+            tr.insertCell(0).textContent = new Date(record.date).toLocaleString();
+            tr.insertCell(1).textContent = parseFloat(record.temperature).toFixed(2);
+            tr.insertCell(2).textContent = parseFloat(record.humidity).toFixed(2);
+            tr.insertCell(3).textContent = record.other || 'N/A';
+          });
+          offset += newRecords.length;
         }
-        document.addEventListener('DOMContentLoaded', async () => {
-          const eS = new EventSource('/events');
-          eS.onopen = () => console.log('Connection established');
-          eS.onmessage = (event) => {
-            console.log(event.data);
-            const data = JSON.parse(event.data);
-            const table = document.querySelector('#TABLE tbody');
-            const row = table.insertRow(0);
-            const date = row.insertCell(0);
-            const temperature = row.insertCell(1);
-            const humidity = row.insertCell(2);
-            const other = row.insertCell(3);
-            date.innerHTML = new Date(data.date).toLocaleString();
-            temperature.innerHTML = data.temperature.toFixed(2);
-            humidity.innerHTML = data.humidity.toFixed(2);
-            other.innerHTML = data.other;
-          };
-          eS.onerror = eS.close;
-        });
-    </script>
+      });
+
+      // Handle search form submission: reload page with query parameters
+      document.getElementById('searchForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const params = new URLSearchParams(new FormData(e.target));
+        window.location = '/?' + params.toString();
+      });
+    });
+  </script>
 </body>
 </html>
