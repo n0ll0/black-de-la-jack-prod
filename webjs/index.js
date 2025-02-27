@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 const PORT = process.env.PORT || 3000;
+const LIMIT = 100;
 const app = express();
 
 // Middleware
@@ -33,11 +34,19 @@ const db = new sqlite3.Database('records.db', (err) => {
 });
 
 // Store connected SSE clients
-const clients = [];
+const clients = {};
 
 // Function to send SSE updates
 const sendSSEUpdate = (data) => {
-  clients.forEach(client => client.res.write(`data: ${JSON.stringify(data)}\n\n`));
+  for (const id in clients) {
+    const client = clients[id];
+    if ((new Date(client.query.to)).getTime() <= (new Date(data.date)).getTime()
+      && (new Date(client.query.from)).getTime() >= (new Date(data.date)).getTime()
+      && client.query.search && data.other != client.query.search) {
+      continue;
+    }
+    client.write(`data: ${JSON.stringify(data)}\n\n`);
+  }
 };
 
 function getRecords(query) {
@@ -67,12 +76,13 @@ function getRecords(query) {
     sql += ' ORDER BY date DESC';
 
     // Pagination: limit & offset
-    const limit = query.limit ? parseInt(query.limit, 10) : 100;
+    const limit = query.limit ? parseInt(query.limit, 10) : LIMIT;
     const offset = query.offset ? parseInt(query.offset, 10) : 0;
     sql += ' LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     db.all(sql, params, (err, rows) => {
+      // console.log(sql, params);
       if (err) {
         reject(err);
       } else {
@@ -124,18 +134,21 @@ app.post('/json', async (req, res) => {
     }
   );
 });
-
+var ids = 0;
 // SSE Events Endpoint
 app.get('/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  clients.push({ res });
+  let id = ids;
+  ids++;
+  res.query = req.query;
+  clients[id] = res;
 
   req.on('close', () => {
-    const index = clients.findIndex(client => client.res === res);
-    if (index !== -1) clients.splice(index, 1);
+    delete clients[id];
+    res.end();
   });
 });
 

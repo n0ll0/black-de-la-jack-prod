@@ -11,12 +11,18 @@
 
   <!-- Search Form -->
   <form id="searchForm">
-    <label for="from">From Date:</label>
-    <input type="date" id="from" name="from" value="<%= locals.query?.from || '' %>">
-    <label for="to">To Date:</label>
-    <input type="date" id="to" name="to" value="<%= locals.query?.to || '' %>">
-    <label for="search">Text Search:</label>
-    <input type="search" id="search" name="search" placeholder="Enter search term" value="<%= locals.query?.search || '' %>">
+    <label for="from">
+      From Date:
+      <input type="datetime-local" id="from" name="from" value="<%= locals.query?.from || '' %>">
+    </label>
+    <label for="to">
+      To Date:
+      <input type="datetime-local" id="to" name="to" value="<%= locals.query?.to || '' %>">
+    </label>
+    <label for="search">
+      Text Search:
+      <input type="search" id="search" name="search" placeholder="Enter search term" value="<%= locals.query?.search || '' %>">
+    </label>
     <button type="submit">Search</button>
   </form>
 
