@@ -1,1 +1,1 @@
-cd web && make
+cd web && export DB_PATH="./database.db" && make

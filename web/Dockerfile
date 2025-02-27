@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY . /app
 WORKDIR /app
 
+ENV DB_PATH "/app/database.db"
+
 RUN make  # Compile your application
 
 EXPOSE 8000

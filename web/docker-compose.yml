@@ -7,7 +7,7 @@ services:
       - "8000:8000"
       - "8443:8443"
     volumes:
-      - data:/app/database.db # Mount a volume for the database file
+      - data:/database.db # Mount a volume for the database file
     restart: always
 
 volumes:

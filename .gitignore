@@ -1,3 +1,5 @@
 .env
 *.exe
 *.db
+rust_approach/
+.vscode/

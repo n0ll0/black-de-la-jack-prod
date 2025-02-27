@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
   char *err_msg = 0;
   int rc;
 
-  const char *db_path = "./database.db"; // Corrected typo here
+  const char *db_path = getenv("DB_PATH");
 
   rc = sqlite3_open(db_path, &db);
   if (rc != SQLITE_OK)
