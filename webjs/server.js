@@ -11,11 +11,15 @@ const app = express();
 app.use(express.static('static'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  console.log(req.method, req.url);
+  next();
+});
 app.set('view engine', 'ejs');
 app.set('views', 'views');
 
 // Initialize the database
-const db = new sqlite3.Database('records.db', (err) => {
+const db = new sqlite3.Database('records.db', async (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
   } else {
@@ -37,32 +41,43 @@ const db = new sqlite3.Database('records.db', (err) => {
 const clients = {};
 
 // Function to send SSE updates
-const sendSSEUpdate = (data) => {
+async function sendSSEUpdate(data) {
   for (const id in clients) {
     const client = clients[id];
-    if ((new Date(client.query.to)).getTime() <= (new Date(data.date)).getTime()
-      && (new Date(client.query.from)).getTime() >= (new Date(data.date)).getTime()
-      && client.query.search && data.other != client.query.search) {
+    const clientTo = new Date(client.query.to).getTime();
+    const clientFrom = new Date(client.query.from).getTime();
+    const dataDate = new Date(data.date).getTime();
+
+    if (clientTo <= dataDate && clientFrom >= dataDate && client.query.search && data.other !== client.query.search) {
       continue;
     }
+  
     client.write(`data: ${JSON.stringify(data)}\n\n`);
   }
-};
 
+}
 function getRecords(query) {
   return new Promise((resolve, reject) => {
     let sql = 'SELECT * FROM sensor_data';
     const conditions = [];
     const params = [];
 
+    // Helper function to convert local datetime to UTC
+    const convertToUTC = dateString => {
+      const date = new Date(dateString);
+      return date.toISOString();
+    };
+
     // Filter by date range if provided
     if (query.from) {
+      const fromUTC = convertToUTC(query.from);
       conditions.push('date >= ?');
-      params.push(query.from);
+      params.push(fromUTC);
     }
     if (query.to) {
+      const toUTC = convertToUTC(query.to);
       conditions.push('date <= ?');
-      params.push(query.to);
+      params.push(toUTC);
     }
     // Optional text search on "other" field
     if (query.search) {
@@ -82,7 +97,6 @@ function getRecords(query) {
     params.push(limit, offset);
 
     db.all(sql, params, (err, rows) => {
-      // console.log(sql, params);
       if (err) {
         reject(err);
       } else {
@@ -96,8 +110,8 @@ function getRecords(query) {
 app.get('/', async (req, res) => {
   try {
     res.setHeader('Content-Type', 'text/html');
-    res.locals.records = await getRecords(req.query);
     res.locals.query = req.query;
+    res.locals.records = await getRecords(req.query);
     res.render('index');
   } catch (error) {
     console.error('Error fetching records:', error);
@@ -130,8 +144,8 @@ app.post('/json', async (req, res) => {
         other: other || 'N/A'
       };
 
-      sendSSEUpdate(newData);
       res.send({ message: 'Data received and stored', data: newData });
+      sendSSEUpdate(newData);
     }
   );
 });

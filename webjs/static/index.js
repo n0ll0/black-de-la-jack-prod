@@ -3,8 +3,8 @@
 async function sendData() {
   const data = {
     date: new Date().toISOString(),
-    temperature: (Math.random() * 10 + 20),
-    humidity: (Math.random() * 20 + 50),
+    temperature: (Math.random() * 50 + 20),
+    humidity: (Math.random() * 70 + 50),
     other: "Test Data"
   };
 
@@ -60,6 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('searchForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const params = new URLSearchParams(new FormData(e.target));
+
+    // Convert local datetime to UTC
+    const from = new Date(document.querySelector('input[name="from"]')?.value)??"";
+    const to = new Date(document.querySelector('input[name="to"]')?.value)??"";
+    if (from?.length > 0) params.set('from', from.toISOString());
+    if (to?.length > 0) params.set('to', to.toISOString());
+
     window.location = '/?' + params.toString();
   });
 });
@@ -71,7 +78,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   document.getElementById('install').hidden = false;
 });
 
-document.getElementById('install').addEventListener('click', async()=>{
+document.getElementById('install')?.addEventListener('click', async (ev) => {
   if (!installPrompt) {
     return;
   }
