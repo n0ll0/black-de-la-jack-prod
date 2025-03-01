@@ -11,9 +11,13 @@ const app = express();
 app.use(express.static('static'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+var conns = 0;
 app.use((req, res, next) => {
   console.log(req.method, req.url);
+  conns++;
+  console.time('Request time ' + (conns) + " " + req.ip);
   next();
+  console.timeEnd('Request time ' + (conns) + " " + req.ip);
 });
 app.set('view engine', 'ejs');
 app.set('views', 'views');
@@ -36,37 +40,46 @@ const db = new sqlite3.Database('records.db', async (err) => {
     });
   }
 });
-
+// Helper function to convert local datetime to UTC
+function convertToUTC(dateString) {
+  try {
+    return (new Date(dateString)).toISOString();
+  } catch (error) {
+    return undefined;
+  }
+}
 // Store connected SSE clients
 const clients = {};
 
 // Function to send SSE updates
 async function sendSSEUpdate(data) {
-  for (const id in clients) {
-    const client = clients[id];
-    const clientTo = new Date(client.query.to).getTime();
-    const clientFrom = new Date(client.query.from).getTime();
-    const dataDate = new Date(data.date).getTime();
+  function dontSend(client) {
+    // Filter data based on client query parameters
+    const clientTo = convertToUTC(client.query.to);
+    const clientFrom = convertToUTC(client.query.from);
 
-    if (clientTo <= dataDate && clientFrom >= dataDate && client.query.search && data.other !== client.query.search) {
-      continue;
-    }
-  
-    client.write(`data: ${JSON.stringify(data)}\n\n`);
+    console.log(client.query, data);
+
+    return (clientTo) ? clientTo <= dataDate : true
+      && (clientFrom) ? clientFrom >= dataDate : true
+      && client.query.search
+    && data.other !== client.query.search;
   }
 
+  const dataDate = convertToUTC(data.date);
+  for (const id in clients) {
+    const client = clients[id];
+    if (!dontSend(client)) {
+      client.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+  }
 }
+
 function getRecords(query) {
   return new Promise((resolve, reject) => {
     let sql = 'SELECT * FROM sensor_data';
     const conditions = [];
     const params = [];
-
-    // Helper function to convert local datetime to UTC
-    const convertToUTC = dateString => {
-      const date = new Date(dateString);
-      return date.toISOString();
-    };
 
     // Filter by date range if provided
     if (query.from) {

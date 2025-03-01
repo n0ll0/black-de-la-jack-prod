@@ -17,7 +17,8 @@ async function sendData() {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Set up SSE connection for real-time updates
-  const eS = new EventSource('/events');
+  const params = new URLSearchParams(window.location.search);
+  const eS = new EventSource('/events' + (params.toString().length > 0 ? '?' + params.toString() : ''));
   eS.onopen = () => console.log('SSE Connection established');
   eS.onmessage = (event) => {
     console.log('New SSE event:', event.data);
