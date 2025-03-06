@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS sensor_data (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  temperature REAL NOT NULL,
+  humidity REAL NOT NULL,
+  other TEXT NULL
+);
+

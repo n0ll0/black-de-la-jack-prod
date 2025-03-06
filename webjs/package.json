@@ -1,19 +1,22 @@
 {
   "name": "black-de-la-jack",
   "version": "1.0.0",
-  "description": "web server for the Black de la Jack project. TalTech.",
+  "description": "webserver",
   "main": "server.js",
   "scripts": {
     "start": "node server.js --host 0.0.0.0",
+    "build": "npm install && npm start",
     "dev": "nodemon server.js --host 0.0.0.0",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
     "express": "^5.0.1",
+    "jsonwebtoken": "^9.0.2",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
