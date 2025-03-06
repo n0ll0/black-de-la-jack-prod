@@ -19,8 +19,10 @@ app.use((req, res, next) => {
   next();
   console.timeEnd('Request time ' + (conns) + " " + req.ip);
 });
-app.set('view engine', 'ejs');
-app.set('views', 'views');
+
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
 
 // Initialize the database
 const db = new sqlite3.Database('records.db', async (err) => {
@@ -40,6 +42,76 @@ const db = new sqlite3.Database('records.db', async (err) => {
     });
   }
 });
+
+// Create users table if not exists
+db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+`, (err) => {
+    if (err) console.error('Table creation error:', err.message);
+});
+
+// Register endpoint
+app.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hashedPassword], function (err) {
+        if (err) {
+            return res.status(500).json({ error: 'User already exists or database error' });
+        }
+        res.json({ message: 'User registered successfully' });
+    });
+});
+
+// Login endpoint
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
+        if (err || !user) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        
+        const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1h' });
+        res.json({ message: 'Login successful', token });
+    });
+});
+
+// Middleware for authentication
+function authenticateToken(req, res, next) {
+    const token = req.headers['authorization'];
+    if (!token) return res.status(401).json({ error: 'Access denied' });
+    
+    jwt.verify(token.split(' ')[1], SECRET_KEY, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid token' });
+        req.user = user;
+        next();
+    });
+}
+
+// Example protected route
+app.get('/protected', authenticateToken, (req, res) => {
+    res.json({ message: 'This is a protected route', user: req.user });
+});
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
 // Helper function to convert local datetime to UTC
 function convertToUTC(dateString) {
   try {
