@@ -1,11 +1,10 @@
 {
   "name": "black-de-la-jack",
   "version": "1.0.0",
-  "description": "webserver",
-  "main": "index.js",
+  "description": "web server for the Black de la Jack project. TalTech.",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js --host 0.0.0.0",
-    "build": "npm install && npm start",
+    "start": "node server.js --host 0.0.0.0",
     "dev": "nodemon server.js --host 0.0.0.0",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
