@@ -10,7 +10,10 @@ async function sendData() {
 
   await fetch('/json', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + localStorage.getItem("_S_BDLJ_")
+    },
     body: JSON.stringify(data)
   });
 }
@@ -23,8 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
   eS.onmessage = (event) => {
     console.log('New SSE event:', event.data);
     const data = JSON.parse(event.data);
+    if (document.getElementById(data.id) !== null) return;
     const table = document.querySelector('#TABLE tbody');
     const row = table.insertRow(0);
+    row.id = data.id;
     row.insertCell(0).innerHTML = new Date(data.date).toLocaleString();
     row.insertCell(1).innerHTML = data.temperature.toFixed(2);
     row.insertCell(2).innerHTML = data.humidity.toFixed(2);
@@ -47,7 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const newRecords = await response.json();
       const tbody = document.querySelector('#TABLE tbody');
       newRecords.forEach(record => {
+        if (document.getElementById(record.id) !== null) return;
         const tr = tbody.insertRow();
+        tr.id = record.id;
         tr.insertCell(0).textContent = new Date(record.date).toLocaleString();
         tr.insertCell(1).textContent = parseFloat(record.temperature).toFixed(2);
         tr.insertCell(2).textContent = parseFloat(record.humidity).toFixed(2);

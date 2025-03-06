@@ -1,14 +1,22 @@
 const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
-const dotenv = require('dotenv');
+const dotenv = require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const fs = require('fs');
+require.extensions['.sql'] = function (module, filename) {
+    module.exports = fs.readFileSync(filename, 'utf8');
+};
 
-dotenv.config();
+const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
 const PORT = process.env.PORT || 3000;
-const LIMIT = 30;
+const LIMIT = 50;
 const app = express();
 
 // Middleware
-app.use(express.static('static'));
+app.use(express.static('static', {
+  extensions: ['html'],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 var conns = 0;
@@ -20,9 +28,6 @@ app.use((req, res, next) => {
   console.timeEnd('Request time ' + (conns) + " " + req.ip);
 });
 
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
 
 // Initialize the database
 const db = new sqlite3.Database('records.db', async (err) => {
@@ -30,83 +35,31 @@ const db = new sqlite3.Database('records.db', async (err) => {
     console.error('Error opening database:', err.message);
   } else {
     console.log('Connected to SQLite database.');
-    db.run(`
-            CREATE TABLE IF NOT EXISTS sensor_data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                temperature REAL NOT NULL,
-                humidity REAL NOT NULL,
-                other TEXT NULL
-            )`, (err) => {
+    db.run(require('./dbscripts/users/init.sql'), (err) => {
       if (err) console.error('Table creation error:', err.message);
     });
+    db.run(require('./dbscripts/sensor_data/init.sql'), (err) => {
+      if (err) console.error('Table creation error:', err.message);
+    });
+
   }
-});
-
-// Create users table if not exists
-db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    )
-`, (err) => {
-    if (err) console.error('Table creation error:', err.message);
-});
-
-// Register endpoint
-app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-    db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hashedPassword], function (err) {
-        if (err) {
-            return res.status(500).json({ error: 'User already exists or database error' });
-        }
-        res.json({ message: 'User registered successfully' });
-    });
-});
-
-// Login endpoint
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
-        if (err || !user) {
-            return res.status(401).json({ error: 'Invalid username or password' });
-        }
-        
-        const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) {
-            return res.status(401).json({ error: 'Invalid username or password' });
-        }
-        
-        const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1h' });
-        res.json({ message: 'Login successful', token });
-    });
 });
 
 // Middleware for authentication
 function authenticateToken(req, res, next) {
-    const token = req.headers['authorization'];
-    if (!token) return res.status(401).json({ error: 'Access denied' });
-    
-    jwt.verify(token.split(' ')[1], SECRET_KEY, (err, user) => {
-        if (err) return res.status(403).json({ error: 'Invalid token' });
-        req.user = user;
-        next();
-    });
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Access denied' });
+
+  jwt.verify(token.split(' ')[1], SECRET_KEY, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
 }
 
 // Example protected route
 app.get('/protected', authenticateToken, (req, res) => {
-    res.json({ message: 'This is a protected route', user: req.user });
+  res.json({ message: 'This is a protected route', user: req.user });
 });
 
 app.set('view engine', 'ejs');
@@ -205,7 +158,7 @@ app.get('/', async (req, res) => {
 });
 
 // JSON API for inserting data
-app.post('/json', async (req, res) => {
+app.post('/json', authenticateToken, async (req, res) => {
   const { date, temperature, humidity, other } = req.body;
 
   if (!date || temperature == null || humidity == null) {
@@ -262,6 +215,50 @@ app.get('/api/records', async (req, res) => {
     console.error('Error fetching records:', error);
     res.status(500).send({ error: 'Database error' });
   }
+});
+
+
+// Register endpoint
+app.post('/api/signup', async (req, res) => {
+  const { username, email, password } = req.body;
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  db.run(`INSERT INTO users (username, email, password) VALUES (?, ?, ?)`, [username, email, hashedPassword], function (err) {
+    if (err) {
+      console.error(err);
+      if (err.code === 'SQLITE_CONSTRAINT') {
+        return res.status(409).json({ message: 'User already exists' });
+      } else {
+        return res.status(500).json({ message: 'Database error' });
+      }
+    }
+    res.json({ message: 'User registered successfully' });
+  });
+});
+
+// Login endpoint
+app.post('/api/signin', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  db.get(`SELECT * FROM users WHERE email = ?`, [email], async (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1D' });
+    res.json({ message: 'Login successful', token });
+  });
 });
 
 // Function to get the local IP address

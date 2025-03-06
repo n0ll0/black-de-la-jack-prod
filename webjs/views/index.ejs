@@ -16,10 +16,33 @@
     </script>
     <script src="/index.js"></script>
 
-    <header>
-      <div class="flex flex-row items-center justify-start">
-        <img src="/Black de la Jack.svg" alt="black de la jack logo" width="100" height="100">
-        <h1>Black de la Jack</h1>
+    <header class="w-full">
+      <div class="flex flex-row items-center flex-space-between w-full">
+        <div class="flex flex-row items-center justify-start" style="gap:2em;flex:0 0 max-content;">
+          <img src="/Black de la Jack.svg" alt="black de la jack logo" width="50" height="50">
+          <h1>Black de la Jack - Sign in</h1>
+        </div>
+        <nav style="justify-self:end;gap:2em;" class="flex flex-row w-content">
+          <div class="flex flex-row flex-space-between items-center" style="flex:1;gap:1em;">
+            <div>
+              <a href="/#">Home</a>
+            </div>
+            <div>
+              <a href="/#about">About</a>
+            </div>
+            <div>
+              <a href="/#contact">Contact</a>
+            </div>
+          </div>
+          <div class="flex" style="flex:1;justify-self:end;gap:1em;">
+            <div>
+              <a href="/signup">Sign up</a>
+            </div>
+            <div>
+              <a href="/signin">Sign in</a>
+            </div>
+          </div>
+        </nav>
       </div>
     </header>
     <main>
@@ -56,7 +79,7 @@
         </thead>
         <tbody>
           <% records.forEach(record=> { %>
-            <tr>
+            <tr id="<%= record.id %>">
               <td>
                 <%= new Date(record.date).toLocaleString() %>
               </td>

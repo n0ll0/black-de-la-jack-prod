@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/styles.css">
+    <title>Black de la Jack</title>
+  </head>
+
+  <body>
+    <header class="w-full">
+      <div class="flex flex-row items-center flex-space-between w-full">
+        <div class="flex flex-row items-center justify-start" style="gap:2em;flex:0 0 max-content;">
+          <img src="/Black de la Jack.svg" alt="black de la jack logo" width="50" height="50">
+          <h1>Black de la Jack - Sign in</h1>
+        </div>
+        <nav style="justify-self:end;gap:2em;" class="flex flex-row w-content">
+          <div class="flex flex-row flex-space-between items-center" style="flex:1;gap:1em;">
+            <div>
+              <a href="/#">Home</a>
+            </div>
+            <div>
+              <a href="/#about">About</a>
+            </div>
+            <div>
+              <a href="/#contact">Contact</a>
+            </div>
+          </div>
+          <div class="flex" style="flex:1;justify-self:end;gap:1em;">
+            <div>
+              <a href="/signup">Sign up</a>
+            </div>
+            <div>
+              <a href="/signin">Sign in</a>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <form id="SIGNIN" >
+        <div class="flex flex-row flex-wrap items-center">
+          <div  class="input-container">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+          </div>
+  
+          <div  class="input-container">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+          </div>
+        </div>
+        
+        <div>
+          <button type="submit">sign in</button>
+        </div>
+      </form>
+      <p id="message"></p>
+      <footer>
+        <p>&copy; 2022 Black de la Jack</p>
+        <p>All rights reserved.</p>
+        <p>Privacy policy</p>
+        <p>Terms of service</p>
+      </footer>
+    </main>
+    <script type="module">
+      document.getElementById('SIGNIN').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(event.target));
+        try {
+          await fetch('/api/signin', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          })
+            .then(r=>({ok: r.ok, r}))
+            .then(async({r,ok})=>({r: await r.json(), ok}))
+            .then(({r,ok})=>{
+              document.getElementById("message").innerHTML = r.message;
+              if (!ok) {
+                localStorage.setItem("_S_BDLJ_", "");
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              localStorage.setItem("_S_BDLJ_", r.token);
+            });
+
+
+        } catch (error) {
+          console.error('Error:', error);
+          document.getElementById("message").innerHTML = error.message;
+        }
+      });
+    </script>
+  </body>
+
+</html>
