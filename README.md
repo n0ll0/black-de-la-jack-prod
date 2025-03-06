@@ -1,7 +1,13 @@
 # Black de la Jack
 Veebiserver on rakendatud Mongoose HTTP serveri abil ning töötleb päringuid, kasutades SQLite andmebaasi ja cJSON teeki JSON andmete parsimiseks ja genereerimiseks.
 
-serveri jooksutamiseks: 
+!NB You need to have node installed
+
+install packages
+```sh
+cd ./webjs/ && npm i --omit=dev
 ```
-  ./run.sh
+serveri jooksutamiseks:
+```sh
+cd ./webjs/ && npm run start
 ```
