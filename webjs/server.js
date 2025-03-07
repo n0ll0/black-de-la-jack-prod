@@ -4,10 +4,12 @@ const dotenv = require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
+const path = require('path');
 require.extensions['.sql'] = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
 };
 
+const DB_PATH = path.join(__dirname, process.env.DB_PATH || 'db/records.db');
 const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
 const PORT = process.env.PORT || 3000;
 const LIMIT = 50;
@@ -30,15 +32,15 @@ app.use((req, res, next) => {
 
 
 // Initialize the database
-const db = new sqlite3.Database('records.db', async (err) => {
+const db = new sqlite3.Database(DB_PATH, async (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
   } else {
     console.log('Connected to SQLite database.');
-    db.run(require('./dbscripts/users/init.sql'), (err) => {
+    db.run(require('./db/scripts/users/init.sql'), (err) => {
       if (err) console.error('Table creation error:', err.message);
     });
-    db.run(require('./dbscripts/sensor_data/init.sql'), (err) => {
+    db.run(require('./db/scripts/sensor_data/init.sql'), (err) => {
       if (err) console.error('Table creation error:', err.message);
     });
 
@@ -100,7 +102,7 @@ async function sendSSEUpdate(data) {
   }
 }
 
-function getRecords(query) {
+async function getRecords(query) {
   return new Promise((resolve, reject) => {
     let sql = 'SELECT * FROM sensor_data';
     const conditions = [];
