@@ -1,15 +1,13 @@
-const sqlite3 = require('sqlite3').verbose();
-const express = require('express');
-const dotenv = require('dotenv').config();
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const fs = require('fs');
-const path = require('path');
-require.extensions['.sql'] = function (module, filename) {
-    module.exports = fs.readFileSync(filename, 'utf8');
-};
+import fs from 'fs';
+import dotenv from 'dotenv';
+import express from 'express';
+import sqlite3 from 'sqlite3';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import { networkInterfaces } from 'os';
+dotenv.config();
 
-const DB_PATH = path.join(__dirname, process.env.DB_PATH || 'db/records.db');
+const DB_PATH = process.env.DB_PATH || './db/records.db';
 const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
 const PORT = process.env.PORT || 3000;
 const LIMIT = 50;
@@ -35,16 +33,21 @@ app.use((req, res, next) => {
 const db = new sqlite3.Database(DB_PATH, async (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
-  } else {
-    console.log('Connected to SQLite database.');
-    db.run(require('./db/scripts/users/init.sql'), (err) => {
-      if (err) console.error('Table creation error:', err.message);
-    });
-    db.run(require('./db/scripts/sensor_data/init.sql'), (err) => {
-      if (err) console.error('Table creation error:', err.message);
-    });
-
+    throw err;
   }
+  console.log('Connected to SQLite database.');
+  db.run(fs.readFileSync('./db/scripts/users/init.sql').toString(), (err) => {
+    if (err) {
+      console.error('Table creation error:', err.message);
+      throw err;
+    }
+  });
+  db.run(fs.readFileSync('./db/scripts/sensor_data/init.sql').toString(), (err) => {
+    if (err) {
+      console.error('Table creation error:', err.message);
+      throw err;
+    }
+  });
 });
 
 // Middleware for authentication
@@ -265,7 +268,7 @@ app.post('/api/signin', (req, res) => {
 
 // Function to get the local IP address
 function getLocalIPAddress() {
-  const interfaces = require('os').networkInterfaces();
+  const interfaces = networkInterfaces();
   for (const interfaceName in interfaces) {
     const addresses = interfaces[interfaceName];
     for (const address of addresses) {
@@ -278,6 +281,6 @@ function getLocalIPAddress() {
 }
 
 // Start server
-module.exports = app.listen(PORT, () => {
+export default app.listen(PORT, () => {
   console.log(`Server started at http://${getLocalIPAddress()}:${PORT}`);
 });

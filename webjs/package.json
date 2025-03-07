@@ -1,12 +1,13 @@
 {
   "name": "black-de-la-jack",
+  "type": "module",
   "version": "1.0.0",
   "description": "webserver",
-  "main": "server.js",
+  "main": "server.mjs",
   "scripts": {
-    "start": "node server.js --host 0.0.0.0",
+    "start": "node server.mjs --host 0.0.0.0",
     "build": "npm install && npm start",
-    "dev": "nodemon server.js --host 0.0.0.0",
+    "dev": "nodemon server.mjs --host 0.0.0.0",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

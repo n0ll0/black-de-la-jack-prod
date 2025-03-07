@@ -119,3 +119,22 @@ tr:hover td {
 .w-content {
   width: max-content;
 }
+
+.cta {
+  padding: 1em;
+  background-color: #5f6368;
+  border-radius: 1em;
+  outline: var(--border) #202124;
+  cursor: pointer;
+  color: #fff;
+  text-decoration: none;
+}
+.cta:visited {
+  padding: 1em;
+  background-color: #5f6368;
+  border-radius: 1em;
+  outline: var(--border) #202124;
+  cursor: pointer;
+  color: #f1f3f4;
+  text-decoration: none;
+}
