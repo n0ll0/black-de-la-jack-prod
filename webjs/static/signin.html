@@ -39,19 +39,19 @@
       </div>
     </header>
     <main>
-      <form id="SIGNIN" >
+      <form id="SIGNIN">
         <div class="flex flex-row flex-wrap items-center">
-          <div  class="input-container">
+          <div class="input-container">
             <label for="email">Email:</label>
             <input type="email" id="email" name="email" required>
           </div>
-  
-          <div  class="input-container">
+
+          <div class="input-container">
             <label for="password">Password:</label>
             <input type="password" id="password" name="password" required>
           </div>
         </div>
-        
+
         <div>
           <button type="submit">sign in</button>
         </div>
@@ -76,14 +76,16 @@
             },
             body: JSON.stringify(data)
           })
-            .then(r=>({ok: r.ok, r}))
-            .then(async({r,ok})=>({r: await r.json(), ok}))
-            .then(({r,ok})=>{
+            .then(r => ({ ok: r.ok, r }))
+            .then(async ({ r, ok }) => ({ r: await r.json(), ok }))
+            .then(({ r, ok }) => {
               document.getElementById("message").innerHTML = r.message;
               if (!ok) {
+                //cookieStorage.setItem("_S_BDLJ_", "");
                 localStorage.setItem("_S_BDLJ_", "");
                 throw new Error(`HTTP error! status: ${r.status}`);
               }
+              //cookieStorage.setItem("_S_BDLJ_", r.token);
               localStorage.setItem("_S_BDLJ_", r.token);
             });
 

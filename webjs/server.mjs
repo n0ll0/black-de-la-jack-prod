@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import { networkInterfaces } from 'os';
 dotenv.config();
 
-const DB_PATH = process.env.DB_PATH || './db/records.db';
+const DB_PATH = process.env.DB_PATH || './db/.db';
 const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
 const PORT = process.env.PORT || 3000;
 const LIMIT = 50;
