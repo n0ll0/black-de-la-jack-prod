@@ -16,6 +16,7 @@ const app = express();
 // Middleware
 app.use(express.static('static', {
   extensions: ['html'],
+  immutable: false,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

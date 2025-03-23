@@ -4,7 +4,7 @@ self.addEventListener("install", evt => {
 	evt.waitUntil(
 		caches.open("Demo")
 			.then(cache => cache.addAll([
-				"/",
+				// "/",
 				"/signin.html",
 				"/signup.html",
 				"/site.webmanifest",
@@ -27,3 +27,9 @@ self.addEventListener("fetch", evt => evt.respondWith(
 self.addEventListener("fetch", evt => evt.respondWith(
 	fetch(evt.request).catch(() => caches.match(evt.request))
 ));*/
+
+self.addEventListener("message", evt => {
+	if (evt.data.action == "skipWaiting") {
+		self.skipWaiting();
+	}
+});
