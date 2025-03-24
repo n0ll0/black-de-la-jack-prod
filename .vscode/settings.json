@@ -4,5 +4,9 @@
     "*.ino": "cpp",
     "*.c": "c",
     "*.h": "cpp",
-  }
+  },
+  "editor.tabSize": 2,
+  "editor.detectIndentation": true,
+  "editor.insertSpaces": true,
+  "editor.guides.indentation": true
 }

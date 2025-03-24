@@ -16,6 +16,7 @@ const app = express();
 // Middleware
 app.use(express.static('static', {
   extensions: ['html'],
+  immutable: false,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -57,6 +58,17 @@ function authenticateToken(req, res, next) {
 
   jwt.verify(token.split(' ')[1], SECRET_KEY, (err, user) => {
     if (err) return res.status(403).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+}
+// Middleware for authentication
+function authenticateTokenOptional(req, res, next) {
+  const token = req.headers['authorization'];
+  if (!token) return next();
+
+  jwt.verify(token.split(' ')[1], SECRET_KEY, (err, user) => {
+    if (err) return next();
     req.user = user;
     next();
   });
@@ -154,7 +166,10 @@ app.get('/', async (req, res) => {
   try {
     res.setHeader('Content-Type', 'text/html');
     res.locals.query = req.query;
+    /* if (req.user) { */
+    res.locals.user = "true";
     res.locals.records = await getRecords(req.query);
+    /* } */
     res.render('index');
   } catch (error) {
     console.error('Error fetching records:', error);
