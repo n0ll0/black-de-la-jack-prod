@@ -62,6 +62,17 @@ function authenticateToken(req, res, next) {
     next();
   });
 }
+// Middleware for authentication
+function authenticateTokenOptional(req, res, next) {
+  const token = req.headers['authorization'];
+  if (!token) return next();
+
+  jwt.verify(token.split(' ')[1], SECRET_KEY, (err, user) => {
+    if (err) return next();
+    req.user = user;
+    next();
+  });
+}
 
 // Example protected route
 app.get('/protected', authenticateToken, (req, res) => {
@@ -155,7 +166,10 @@ app.get('/', async (req, res) => {
   try {
     res.setHeader('Content-Type', 'text/html');
     res.locals.query = req.query;
+    /* if (req.user) { */
+    res.locals.user = "true";
     res.locals.records = await getRecords(req.query);
+    /* } */
     res.render('index');
   } catch (error) {
     console.error('Error fetching records:', error);
