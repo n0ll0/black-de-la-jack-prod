@@ -1,10 +1,10 @@
-#include <ESP8266WiFi.h>  // Use <WiFi.h> for ESP32
-#include <ESP8266HTTPClient.h>  // Use <HTTPClient.h> for ESP32
+#include <WiFi.h>
+#include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
 
-#define DHTPIN 2  // GPIO2 (D4 on NodeMCU)
-#define DHTTYPE DHT22  // Change to DHT11 if needed
+#define DHTPIN 2
+#define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
 // WiFi credentials
@@ -12,7 +12,10 @@ const char* ssid = "your_wifi_ssid";
 const char* password = "your_wifi_password";
 
 // Server details
-const char* serverUrl = "http://your-server-ip:3000/json";  // Change IP to match your server
+const char* serverUrl = "http://insert_server_here:3000";
+
+// Function prototype
+String getISOTime();
 
 void setup() {
   Serial.begin(115200);
@@ -41,34 +44,41 @@ void loop() {
       return;
     }
 
-    // Create JSON object
-    StaticJsonDocument<200> jsonDoc;
-    jsonDoc["date"] = getISOTime();
-    jsonDoc["temperature"] = temperature;
-    jsonDoc["humidity"] = humidity;
-    jsonDoc["other"] = "Arduino Sensor";
+    // Use JsonDocument directly
+    JsonDocument* jsonDoc = new JsonDocument();
+    
+    (*jsonDoc)["date"] = getISOTime();
+    (*jsonDoc)["temperature"] = temperature;
+    (*jsonDoc)["humidity"] = humidity;
+    (*jsonDoc)["other"] = "ESP32 Sensor";
 
     String requestBody;
-    serializeJson(jsonDoc, requestBody);
+    serializeJson(*jsonDoc, requestBody);
 
     // Send POST request
     int httpResponseCode = http.POST(requestBody);
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
     http.end();
+
+    // Free allocated memory
+    delete jsonDoc;
   } else {
     Serial.println("WiFi Disconnected");
   }
 
-  delay(60000);  // Send data every 60 seconds
+  delay(60000);
 }
 
 // Function to get current timestamp in ISO format
 String getISOTime() {
   time_t now = time(nullptr);
-  struct tm* timeInfo;
-  timeInfo = gmtime(&now);
+  struct tm timeInfo;
+  if (!getLocalTime(&timeInfo)) {
+    Serial.println("Failed to obtain time");
+    return "";
+  }
   char buffer[25];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", timeInfo);
+  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &timeInfo);
   return String(buffer);
 }
