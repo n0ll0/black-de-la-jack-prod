@@ -1,50 +1,51 @@
-// #include <ESP8266WiFi.h>  // Use <WiFi.h> for ESP32
-#include <WiFi.h>  // Use <WiFi.h> for ESP32
-// #include <ESP8266HTTPClient.h>  // Use <HTTPClient.h> for ESP32
-#include <HTTPClient.h>  // Use <HTTPClient.h> for ESP32
-#include <ArduinoJson.h>
+#include <BluetoothSerial.h>
 #include <DHT.h>
+#include <ArduinoJson.h>
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
-// WiFi credentials
-const char* ssid = "your_wifi_ssid";
-const char* password = "your_wifi_password";
 
-// Server details
-const char* serverUrl = "http://your-server-ip:3000/json";  // Change IP to match your server
-
-void setup() {
-  Serial.begin(115200);
-  WiFi.begin(ssid, password);
-  dht.begin();
-
-  Serial.print("Connecting to WiFi...");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
-  Serial.println("\nConnected to WiFi!");
-}
+// Bluetooth Serial Object
+BluetoothSerial SerialBT;
 
 // Function to get current timestamp in ISO format
 String getISOTime() {
   time_t now = time(nullptr);
-  struct tm* timeInfo;
-  timeInfo = gmtime(&now);
+  struct tm timeInfo;
+  if (!getLocalTime(&timeInfo)) {
+    Serial.println("Failed to obtain time");
+    return "";
+  }
   char buffer[25];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", timeInfo);
+  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &timeInfo);
   return String(buffer);
 }
 
 
-void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
 
+  // Start Bluetooth Serial
+  if (!SerialBT.begin("ESP32_DHT22")) {  // "ESP32_DHT22" is the Bluetooth device name
+    Serial.println("Bluetooth initialization failed!");
+    return;
+  }
+  Serial.println("Bluetooth initialized and waiting for connection...");
+  
+  // Waiting for Bluetooth device connection
+  while (!SerialBT.connected()) {
+    delay(1000);
+    Serial.println("Waiting for Bluetooth connection...");
+  }
+
+  Serial.println("Bluetooth device connected!");
+}
+
+void loop() {
+  // Check if Bluetooth is connected
+  if (SerialBT.hasClient()) {
     float temperature = dht.readTemperature();
     float humidity = dht.readHumidity();
 
@@ -53,35 +54,28 @@ void loop() {
       return;
     }
 
-    // Use JsonDocument directly
-    JsonDocument* jsonDoc = new JsonDocument();
-    
-    (*jsonDoc)["date"] = getISOTime();
-    (*jsonDoc)["temperature"] = temperature;
-    (*jsonDoc)["humidity"] = humidity;
-    (*jsonDoc)["other"] = "ESP32 Sensor";
-    // StaticJsonDocument<200> jsonDoc;
+    // Create a JsonDocument
     JsonDocument jsonDoc;
+
+    // Add data to the JsonDocument
     jsonDoc["date"] = getISOTime();
     jsonDoc["temperature"] = temperature;
     jsonDoc["humidity"] = humidity;
-    jsonDoc["other"] = "Arduino Sensor";
+    jsonDoc["other"] = "ESP32 Sensor";
 
+    // Serialize the JsonDocument into a string
     String requestBody;
-    serializeJson(*jsonDoc, requestBody);
+    serializeJson(jsonDoc, requestBody);
 
-    // Send POST request
-    int httpResponseCode = http.POST(requestBody);
-    Serial.print("HTTP Response code: ");
-    Serial.println(httpResponseCode);
-    http.end();
+    // Send the JSON data via Bluetooth Serial
+    SerialBT.println(requestBody);  // Send data over Bluetooth
 
-    // Free allocated memory
-    delete jsonDoc;
+    Serial.println("Data sent over Bluetooth:");
+    Serial.println(requestBody);
   } else {
-    Serial.println("WiFi Disconnected");
+    Serial.println("No Bluetooth client connected.");
   }
 
+  // Wait 60 seconds before sending data again
   delay(60000);
 }
-

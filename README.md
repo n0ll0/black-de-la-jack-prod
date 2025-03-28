@@ -1,7 +1,7 @@
 # Black de la Jack
-Veebiserver on rakendatud Mongoose HTTP serveri abil ning töötleb päringuid, kasutades SQLite andmebaasi ja cJSON teeki JSON andmete parsimiseks ja genereerimiseks.
+Veebiserver kasutab Express.js, SQLite ja JWT autentimist. Toetab reaalajas andmevoogu (SSE) ning andmete salvestamist ja päringuid.
 
-!NB You need to have node installed
+!NB Node.js peab olema paigaldatud
 
 install packages
 ```sh
