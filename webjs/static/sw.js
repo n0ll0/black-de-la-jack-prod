@@ -32,4 +32,18 @@ self.addEventListener("message", evt => {
 	if (evt.data.action == "skipWaiting") {
 		self.skipWaiting();
 	}
+	if (evt.data.action == "clearCache") {
+		caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key))));
+	}
+	if (evt.data.action == "enterData") {
+		self.localStorage.setItem("data-entries", evt.data.entries);
+	}
+	if (evt.data.action == "addData") {
+		const data = JSON.parse(self.localStorage.getItem("data-entries")) || [];
+		data.push(evt.data.entry);
+		self.localStorage.setItem("data-entries", JSON.stringify(data));
+	}
+	if (evt.data.action == "getData") {
+    evt.ports[0].postMessage(JSON.parse(self.localStorage.getItem("data-entries")) || []);
+  }
 });

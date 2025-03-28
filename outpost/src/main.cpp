@@ -1,21 +1,19 @@
-#include <WiFi.h>
-#include <HTTPClient.h>
+// #include <ESP8266WiFi.h>  // Use <WiFi.h> for ESP32
+#include <WiFi.h>  // Use <WiFi.h> for ESP32
+// #include <ESP8266HTTPClient.h>  // Use <HTTPClient.h> for ESP32
+#include <HTTPClient.h>  // Use <HTTPClient.h> for ESP32
 #include <ArduinoJson.h>
 #include <DHT.h>
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
-
 // WiFi credentials
 const char* ssid = "your_wifi_ssid";
 const char* password = "your_wifi_password";
 
 // Server details
-const char* serverUrl = "http://insert_server_here:3000";
-
-// Function prototype
-String getISOTime();
+const char* serverUrl = "http://your-server-ip:3000/json";  // Change IP to match your server
 
 void setup() {
   Serial.begin(115200);
@@ -29,6 +27,17 @@ void setup() {
   }
   Serial.println("\nConnected to WiFi!");
 }
+
+// Function to get current timestamp in ISO format
+String getISOTime() {
+  time_t now = time(nullptr);
+  struct tm* timeInfo;
+  timeInfo = gmtime(&now);
+  char buffer[25];
+  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", timeInfo);
+  return String(buffer);
+}
+
 
 void loop() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -51,6 +60,12 @@ void loop() {
     (*jsonDoc)["temperature"] = temperature;
     (*jsonDoc)["humidity"] = humidity;
     (*jsonDoc)["other"] = "ESP32 Sensor";
+    // StaticJsonDocument<200> jsonDoc;
+    JsonDocument jsonDoc;
+    jsonDoc["date"] = getISOTime();
+    jsonDoc["temperature"] = temperature;
+    jsonDoc["humidity"] = humidity;
+    jsonDoc["other"] = "Arduino Sensor";
 
     String requestBody;
     serializeJson(*jsonDoc, requestBody);
@@ -70,15 +85,3 @@ void loop() {
   delay(60000);
 }
 
-// Function to get current timestamp in ISO format
-String getISOTime() {
-  time_t now = time(nullptr);
-  struct tm timeInfo;
-  if (!getLocalTime(&timeInfo)) {
-    Serial.println("Failed to obtain time");
-    return "";
-  }
-  char buffer[25];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &timeInfo);
-  return String(buffer);
-}
