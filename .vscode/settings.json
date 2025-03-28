@@ -8,5 +8,7 @@
   "editor.tabSize": 2,
   "editor.detectIndentation": true,
   "editor.insertSpaces": true,
-  "editor.guides.indentation": true
+  "editor.guides.indentation": true,
+  "editor.formatOnSave": true,
+  "prettier.useTabs": true
 }

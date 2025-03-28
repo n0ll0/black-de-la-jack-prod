@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <!-- (B) ICONS & PLATFORM SPECIFIC -->
+    <link rel="icon" href="static/Black de la Jack.svg" type="image/svg+xml" />
+
+    <!-- (B2) ANDROID/CHROME -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="white">
+
+    <!-- (B3) IOS APP ICON + MOBILE SAFARI -->
+    <link rel="apple-touch-icon" href="static/Black de la Jack.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Black de la Jack">
+
+    <!-- (B4) WINDOWS -->
+    <meta name="msapplication-TileImage" content="static/Black de la Jack.svg">
+    <meta name="msapplication-TileColor" content="#ffffff">
+
+    <!-- (D) SERVICE WORKER -->
+    <script>
+      if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); }
+    </script>
+
+    <link rel="stylesheet" href="static/styles.css" />
+    <link rel="manifest" href="static/site.webmanifest" />
+    <script src="index.js" defer></script>
+    <title>Black de la Jack</title>
+  </head>
+
+  <body>
+    <header class="w-full">
+      <div class="flex flex-row items-center flex-space-between w-full">
+        <div class="flex flex-row items-center justify-start" style="gap:2em;flex:0 0 max-content;">
+          <img src="static/Black de la Jack.svg" alt="black de la jack logo" width="50" height="50">
+          <h1>Black de la Jack</h1>
+        </div>
+      </div>
+    </header>
+    <main style="margin-bottom: 5em;">
+      <section id="DATA_VIEW">
+        <button type="button" id="makeFakeData">send some fake sensor data</button>
+        <button type="button" id="install" hidden>install app</button>
+        <button type="button" id="select_device">Connect to Bluetooth</button>
+
+        <table id="TABLE">
+          <thead>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+
+      </section>
+
+    </main>
+    <footer style="position:fixed;bottom:0;left:0;width: 100vw;padding-block:1em;">
+      <nav style="justify-self:center;gap:1em;position:relative;" class="flex flex-column w-content">
+        <div>
+          <a href="#">Home</a>
+        </div>
+        <div>
+          <a href="#about">About</a>
+        </div>
+      </nav>
+    </footer>
+  </body>
+
+</html>

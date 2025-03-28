@@ -3,7 +3,7 @@
 The Outpost Data Transmission and Monitoring System is an innovative platform designed to collect environmental data through an array of sensors and transmit this data to user devices. The system emphasizes efficiency, modularity, and usability, aiming to provide real-time insights to users while adhering to modern UX standards.
 
 ## Key Components
-* Outpost (Hardware)
+*###* Outpost (Hardware)
   * Microcontroller: ESP32 * WiFi LoRa 32 (V2)
   * Sensors:
     * DHT22: Temperature and Humidity Sensor

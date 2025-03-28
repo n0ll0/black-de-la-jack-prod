@@ -4,12 +4,10 @@ self.addEventListener("install", evt => {
 	evt.waitUntil(
 		caches.open("Demo")
 			.then(cache => cache.addAll([
-				// "/",
-				"/signin.html",
-				"/signup.html",
-				"/site.webmanifest",
-				"/Black de la Jack.svg",
-				// "/index.js"
+				"index.html",
+				"static/site.webmanifest",
+				"static/Black de la Jack.svg",
+				"static/index.js"
 			]))
 			.catch(err => console.error(err))
 	);
@@ -47,3 +45,4 @@ self.addEventListener("message", evt => {
     evt.ports[0].postMessage(JSON.parse(self.localStorage.getItem("data-entries")) || []);
   }
 });
+
