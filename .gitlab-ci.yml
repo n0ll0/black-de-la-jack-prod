@@ -4,9 +4,9 @@ pages:
     - mkdir .public
     - cp -r web/* .public/
     - mv .public public
+  pages: true
   artifacts:
     paths:
       - public
   only:
     - master
-  pages: true
