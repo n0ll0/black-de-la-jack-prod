@@ -1,81 +1,92 @@
-#include <BluetoothSerial.h>
+#include <Arduino.h>
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
 #include <DHT.h>
 #include <ArduinoJson.h>
+#include <time.h>
+
+#define SERVICE_UUID        "711661ab-a17a-4c7f-bc9f-de1f070a66f4"
+#define CHARACTERISTIC_UUID "4d4bc742-f257-41e5-b268-6bc4f3d1ea73"
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
-// Bluetooth Serial Object
-BluetoothSerial SerialBT;
+BLEServer* pServer = nullptr;
+BLECharacteristic* pCharacteristic = nullptr;
+bool deviceConnected = false;
 
-// Function to get current timestamp in ISO format
-String getISOTime() {
-  time_t now = time(nullptr);
-  struct tm timeInfo;
-  if (!getLocalTime(&timeInfo)) {
-    Serial.println("Failed to obtain time");
-    return "";
+class ServerCallbacks: public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    deviceConnected = true;
+    Serial.println("BLE device connected");
   }
-  char buffer[25];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &timeInfo);
-  return String(buffer);
-}
 
+  void onDisconnect(BLEServer* pServer) {
+    deviceConnected = false;
+    Serial.println("BLE device disconnected");
+  }
+};
 
 void setup() {
   Serial.begin(115200);
   dht.begin();
 
-  // Start Bluetooth Serial
-  if (!SerialBT.begin("ESP32_DHT22")) {  // "ESP32_DHT22" is the Bluetooth device name
-    Serial.println("Bluetooth initialization failed!");
-    return;
-  }
-  Serial.println("Bluetooth initialized and waiting for connection...");
-  
-  // Waiting for Bluetooth device connection
-  while (!SerialBT.connected()) {
-    delay(1000);
-    Serial.println("Waiting for Bluetooth connection...");
-  }
+  BLEDevice::init("BlackDeLaJack");
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new ServerCallbacks());
 
-  Serial.println("Bluetooth device connected!");
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+
+  pCharacteristic = pService->createCharacteristic(
+    CHARACTERISTIC_UUID,
+    BLECharacteristic::PROPERTY_NOTIFY
+  );
+
+  pCharacteristic->addDescriptor(new BLE2902());
+
+  pService->start();
+
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->start();
+
+  Serial.println("Server started. Waiting for client...");
 }
 
 void loop() {
-  // Check if Bluetooth is connected
-  if (SerialBT.hasClient()) {
-    float temperature = dht.readTemperature();
-    float humidity = dht.readHumidity();
+  if (deviceConnected) {
+    float temperature = 1000;
+    float humidity = 727;
 
     if (isnan(temperature) || isnan(humidity)) {
       Serial.println("Failed to read from DHT sensor!");
+      delay(10000);
       return;
     }
 
-    // Create a JsonDocument
-    JsonDocument jsonDoc;
+    // Create JSON using JsonDocument (still static memory)
+    JsonDocument doc; // Alias for StaticJsonDocument<256>
+    StaticJsonDocument<256>& docRef = reinterpret_cast<StaticJsonDocument<256>&>(doc);
+    
+    docRef["temperature"] = temperature;
+    docRef["humidity"] = humidity;
 
-    // Add data to the JsonDocument
-    jsonDoc["date"] = getISOTime();
-    jsonDoc["temperature"] = temperature;
-    jsonDoc["humidity"] = humidity;
-    jsonDoc["other"] = "ESP32 Sensor";
+    char jsonBuffer[256];
+    serializeJson(docRef, jsonBuffer);
 
-    // Serialize the JsonDocument into a string
-    String requestBody;
-    serializeJson(jsonDoc, requestBody);
+    // Send as BLE notification
+    pCharacteristic->setValue((uint8_t*)jsonBuffer, strlen(jsonBuffer));
+    pCharacteristic->notify();
 
-    // Send the JSON data via Bluetooth Serial
-    SerialBT.println(requestBody);  // Send data over Bluetooth
-
-    Serial.println("Data sent over Bluetooth:");
-    Serial.println(requestBody);
+    Serial.print("Sent via BLE: ");
+    Serial.println(jsonBuffer);
   } else {
-    Serial.println("No Bluetooth client connected.");
+    Serial.println("No BLE client connected.");
   }
 
-  // Wait 60 seconds before sending data again
-  delay(60000);
+  delay(1000); // send every 1 seconds
 }
