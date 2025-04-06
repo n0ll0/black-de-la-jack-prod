@@ -2,6 +2,7 @@ const your_service_uuid = '711661ab-a17a-4c7f-bc9f-de1f070a66f4';
 const your_characteristic_uuid = '4d4bc742-f257-41e5-b268-6bc4f3d1ea73';
 const DATABASENAME = "BlackDeLaJackClimate";
 
+// Number.isNumber = (v) => parseFloat(v) == v;
 /**
  * Try-catch helper function
  * @template T
@@ -28,7 +29,7 @@ function tryCatch(input) {
 }
 
 // Function to save new sensor data
-async function saveData() {
+async function saveRandomData() {
   const data = {
     date: new Date().toISOString(),
     temperature: (Math.random() * 30 + 0),
@@ -76,6 +77,7 @@ async function saveData() {
 
 
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM fully loaded and parsed');
   /** @type {HTMLTableSectionElement} */
   const tbody = document.querySelector('#TABLE tbody');
   /** @type {HTMLTableSectionElement} */
@@ -92,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * Create table headers from object keys
-   * @param {Object} data 
+   * @param {Object} data
    */
   function createTableHeaders(data) {
     thead.innerHTML = ''; // Clear existing headers
@@ -102,13 +104,15 @@ document.addEventListener('DOMContentLoaded', () => {
       th.textContent = key.charAt(0).toUpperCase() + key.slice(1);
       headerRow.appendChild(th);
     });
+    console.log('Created table headers', data);
   }
 
   /**
    * Create filter controls for each column
-   * @param {Object} data 
+   * @param {Object} data
    */
   function createFilterControls(data) {
+    console.log('Creating filter controls', data);
     const filterForm = document.createElement('form');
     filterForm.id = 'filterForm';
     filterForm.className = 'filters';
@@ -120,9 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create operator select
       const operatorSelect = document.createElement('select');
-      operatorSelect.addEventListener('change', handleFilter);
+      operatorSelect.addEventListener('change', applyFiltersAndSort);
       operatorSelect.name = `${key}_operator`;
-      const operators = getOperatorsForType(typeof data[key]);
+      let operators = [];
+      console.log(key, data[key]);
+      if (key === 'date') {
+        operators = getOperatorsForType('object');
+      } else {
+        operators = getOperatorsForType(typeof data[key]);
+      }
+      console.log(operators);
       operators.forEach(op => {
         const option = document.createElement('option');
         option.value = op.value;
@@ -133,8 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Create value input
       const valueInput = document.createElement('input');
       valueInput.name = `${key}_value`;
-      valueInput.type = getInputTypeForValue(data[key]);
-      valueInput.addEventListener('change', handleFilter);
+      valueInput.type = getInputTypeForValue(data[key], key);
+      valueInput.addEventListener('change', applyFiltersAndSort);
 
 
       // Create sort button
@@ -153,27 +164,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       fieldset.appendChild(div);
       filterForm.appendChild(fieldset);
-  });
-
-    // // Add filter button
-    // const filterBtn = document.createElement('button');
-    // filterBtn.type = 'submit';
-    // filterBtn.textContent = 'Apply Filters';
-    // filterForm.appendChild(filterBtn);
+    });
 
     // Insert form before table
     document.querySelector('#TABLE').insertAdjacentElement('beforebegin', filterForm);
 
-    // Add filter form handler
-    filterForm.addEventListener('submit', handleFilter);
+    // Add filter form handler (though we'll trigger applyFiltersAndSort on input change)
+    filterForm.addEventListener('submit', (e) => e.preventDefault());
   }
 
   /**
    * Get appropriate operators based on data type
-   * @param {string} type 
+   * @param {string} type
    * @returns {Array<{value: string, label: string}>}
    */
   function getOperatorsForType(type) {
+
     const operators = {
       string: [
         { value: 'eq', label: 'Equals' },
@@ -196,22 +202,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * Get appropriate input type based on value
-   * @param {any} value 
+   * @param {any} value
    */
-  function getInputTypeForValue(value) {
-    if (value instanceof Date) return 'datetime-local';
+  function getInputTypeForValue(value, key) {
+    if (value instanceof Date || key === "date") return 'datetime-local';
     if (typeof value === 'number') return 'number';
     return 'text';
   }
 
   /**
-   * Handle filter form submission
-   * @param {Event} e 
+   * Apply filters to the data
+   * @param {Array<Object>} records
+   * @param {Object} filters
+   * @returns {Array<Object>}
    */
-  async function handleFilter(e) {
-    e.preventDefault();
-    const formData = new FormData(e.target.form);
-    const filters = [];
+  function applyFilters(records, filters) {
+    let filteredRecords = [...records];
+    Object.entries(filters).forEach(([field, conditions]) => {
+      if (!conditions.value) return;
+
+      filteredRecords = filteredRecords.filter(record => {
+        const value = record[field];
+        const filterValue = conditions.value;
+
+        switch (conditions.operator) {
+          case 'eq': return value == filterValue;
+          case 'gt': return value > filterValue;
+          case 'lt': return value < filterValue;
+          case 'gte': return value >= filterValue;
+          case 'lte': return value <= filterValue;
+          case 'contains': return String(value).includes(filterValue);
+          default: return true;
+        }
+      });
+    });
+    return filteredRecords;
+  }
+
+  let currentSortField = null;
+  let currentSortOrder = 'asc';
+
+  /**
+   * Sort the data
+   * @param {Array<Object>} records
+   * @param {string|null} field
+   * @returns {Array<Object>}
+   */
+  function sortData(records, field) {
+    if (!field) return records;
+
+    const ascending = currentSortField === field && currentSortOrder === 'asc';
+    currentSortField = field;
+    currentSortOrder = ascending ? 'desc' : 'asc';
+
+    return records.sort((a, b) => {
+      const aValue = a[field];
+      const bValue = b[field];
+
+      if (aValue instanceof Date || isDate(aValue)) {
+        return ascending ? new Date(aValue) - new Date(bValue) : new Date(bValue) - new Date(aValue);
+      }
+      if (typeof aValue === "number" || parseFloat(aValue) == aValue) {
+        return ascending ? bValue - aValue : aValue - bValue;
+      }
+      return ascending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+    });
+  }
+
+  /**
+   * Handle filter and sort
+   */
+  async function applyFiltersAndSort() {
+    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
+    const formData = new FormData(filterForm);
+    const filters = {};
 
     // Group form data by field
     for (const [key, value] of formData.entries()) {
@@ -219,8 +284,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!filters[field]) filters[field] = {};
       filters[field][type] = value;
     }
+    console.log("filters", filters);
 
-    // Apply filters to IndexedDB data
+    // Load all data from IndexedDB
     const request = window.indexedDB.open(DATABASENAME, 1);
     request.onsuccess = (event) => {
       const db = event.target.result;
@@ -229,76 +295,48 @@ document.addEventListener('DOMContentLoaded', () => {
       const getAllRequest = store.getAll();
 
       getAllRequest.onsuccess = () => {
-        let filteredRecords = getAllRequest.result;
+        let records = getAllRequest.result;
 
-        // Apply each filter
-        Object.entries(filters).forEach(([field, conditions]) => {
-          if (!conditions.value) return;
+        // Apply filters
+        const filteredRecords = applyFilters(records, filters);
 
-          filteredRecords = filteredRecords.filter(record => {
-            const value = record[field];
-            const filterValue = conditions.value;
+        // Apply sorting
+        const sortedAndFilteredRecords = sortData(filteredRecords, currentSortField);
 
-            switch (conditions.operator) {
-              case 'eq': return value == filterValue;
-              case 'gt': return value > filterValue;
-              case 'lt': return value < filterValue;
-              case 'gte': return value >= filterValue;
-              case 'lte': return value <= filterValue;
-              case 'contains': return String(value).includes(filterValue);
-              default: return true;
-            }
-          });
-        });
-
-        // Update table with filtered results
+        // Update table with filtered and sorted results
         tbody.innerHTML = '';
-        filteredRecords.forEach(record => addRow(tbody, record));
+        sortedAndFilteredRecords.forEach(record => addRow(tbody, record));
       };
     };
   }
 
   function isDate(dateVal) {
     var d = new Date(dateVal);
-    return d.toString() === 'Invalid Date'? false: true;
+    return d.toString() === 'Invalid Date' ? false : true;
   }
 
   /**
-   * Sort table by column
-   * @param {string} field 
+   * Sort table by column (triggered by button click)
+   * @param {string} field
    */
   function sortTable(field) {
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const ascending = tbody.dataset.sortField === field &&
-      tbody.dataset.sortOrder === 'asc';
-
-    rows.sort((a, b) => {
-      const fieldset = rows[0].dataset;
-      const aValue = a.dataset[field];
-      const bValue = b.dataset[field];
-      if (fieldset[field] instanceof Date || isDate(aValue)) {
-        return ascending ? new Date(aValue) - new Date(bValue) : new Date(bValue) - new Date(aValue);
-      }
-      if (typeof fieldset[field] === "number" || parseFloat(aValue) == aValue) {
-        return ascending ? bValue - aValue : aValue - bValue;
-      }
-      return ascending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
-    });
-
-    tbody.dataset.sortField = field;
-    tbody.dataset.sortOrder = ascending ? 'desc' : 'asc';
-
-    rows.forEach(row => tbody.appendChild(row));
+    if (currentSortField === field) {
+      currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortField = field;
+      currentSortOrder = 'asc';
+    }
+    applyFiltersAndSort();
   }
 
   /**
    * Add a row to the table
    * @param {HTMLTableSectionElement} table
-   * @param {Object} data 
+   * @param {Object} data
    */
   function addRow(table, data) {
     const row = table.insertRow(0);
-    row.id = data.id || data.date; // Use date as fallback ID
+    row.id = data.id || (data.date || new Date()); // Use date as fallback ID
     for (const key in data) {
       const cell = row.insertCell();
       /** @type {Date | number | string} */
@@ -316,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * Save data to IndexedDB
-   * @param {Object} data 
+   * @param {Object} data
    */
   async function saveToIndexedDB(data) {
     const request = window.indexedDB.open(DATABASENAME, 1);
@@ -342,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Load all data from IndexedDB
+   * Load all data from IndexedDB and initialize table and filters
    */
   async function loadFromIndexedDB() {
     const request = window.indexedDB.open(DATABASENAME, 1);
@@ -366,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (records.length > 0) {
           createTableHeaders(records[0]);
           createFilterControls(records[0]);
-          records.forEach(record => addRow(tbody, record));
+          applyFiltersAndSort(); // Apply initial filters and sort if any
         } else {
           // Create headers and filters even if no data exists
           createTableHeaders(defaultDataStructure);
@@ -383,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load existing data on startup
   loadFromIndexedDB();
 
-  // Infinite scrolling / "Load More" functionality
+  // Infinite scrolling / "Load More" functionality (not directly related to filtering/sorting on new data)
   if (!globalThis.offset) globalThis.offset = 0;
   const limit = globalThis.offset;
 
@@ -443,6 +481,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const decoder = new TextDecoder();
           const jsonString = decoder.decode(buffer);
           const data = JSON.parse(jsonString);
+          data["date"] = new Date().toISOString();
+          console.log('Decoded data:', data);
           return data;
         } catch (error) {
           console.error('Error decoding data:', error);
@@ -459,10 +499,15 @@ document.addEventListener('DOMContentLoaded', () => {
           // Create headers if they don't exist
           if (!thead.hasChildNodes()) {
             createTableHeaders(data);
+            createFilterControls(data);
           }
           // Add to table and save to IndexedDB
-          addRow(tbody, data);
           await saveToIndexedDB(data);
+
+          console.log('Saved data to IndexedDB:', data);
+
+          // Apply filters and sort after new data is saved
+          applyFiltersAndSort();
         }
       });
 
@@ -510,11 +555,41 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error during installation:', error);
     }
   });
+  const resetDB = document.createElement('button');
+  resetDB.id = 'resetDB';
+  resetDB.textContent = 'Reset DB';
+  resetDB.addEventListener('click', async () => {
+    alert('Resetting DB...');
+    // Open the database
+    const request = window.indexedDB.open(DATABASENAME, 1);
 
-  document.querySelector('#makeFakeData').addEventListener('click', saveData);
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction("sensorData", "readwrite");
+      const store = transaction.objectStore("sensorData");
+      store.clear(); // Clear all data in the object store
+      console.log("Database cleared successfully.");
+      location.reload();
+    };
+
+    request.onerror = (event) => {
+      console.error("Error opening database:", event.target.error);
+      location.reload();
+    };
+  });
+  resetDB.className = 'btn btn-primary';
+  document.body.querySelector('main').appendChild(resetDB);
+
+  // document.querySelector('#makeFakeData').addEventListener('click', saveRandomData);
 });
 
 let installPrompt = null;
+// const installButton = document.createElement('button');
+// installButton.id = 'install';
+// installButton.textContent = 'Install PWA';
+// // installButton.hidden = true;
+// document.body.appendChild(installButton);
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   installPrompt = e;
@@ -533,5 +608,3 @@ window.addEventListener('appinstalled', (e) => {
   // Clear the install prompt
   installPrompt = null;
 });
-
-

@@ -21,10 +21,10 @@ self.addEventListener("fetch", evt => evt.respondWith(
 	caches.match(evt.request).then(res => res || fetch(evt.request))
 ));
 
-/* (C) LOAD WITH NETWORK FIRST, FALLBACK TO CACHE IF OFFLINE
+// (C) LOAD WITH NETWORK FIRST, FALLBACK TO CACHE IF OFFLINE
 self.addEventListener("fetch", evt => evt.respondWith(
 	fetch(evt.request).catch(() => caches.match(evt.request))
-));*/
+));
 
 self.addEventListener("message", evt => {
 	if (evt.data.action == "skipWaiting") {
