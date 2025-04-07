@@ -1,6 +1,7 @@
 const your_service_uuid = '711661ab-a17a-4c7f-bc9f-de1f070a66f4';
 const your_characteristic_uuid = '4d4bc742-f257-41e5-b268-6bc4f3d1ea73';
 const DATABASENAME = "BlackDeLaJackClimate";
+globalThis.offset = 0;
 
 // Number.isNumber = (v) => parseFloat(v) == v;
 /**
@@ -121,10 +122,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const fieldset = document.createElement('fieldset');
       const legend = document.createElement('legend');
       legend.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+      fieldset.classList.add('collapsed'); // Start collapsed
+
+      legend.addEventListener('click', (e) => {
+        fieldset.classList.toggle('collapsed');
+      });
 
       // Create operator select
       const operatorSelect = document.createElement('select');
-      operatorSelect.addEventListener('change', applyFiltersAndSort);
+      operatorSelect.addEventListener('change', () => applyFiltersAndSort(false));
+      operatorSelect.addEventListener('input', () => applyFiltersAndSort(false));
       operatorSelect.name = `${key}_operator`;
       let operators = [];
       console.log(key, data[key]);
@@ -145,14 +152,40 @@ document.addEventListener('DOMContentLoaded', () => {
       const valueInput = document.createElement('input');
       valueInput.name = `${key}_value`;
       valueInput.type = getInputTypeForValue(data[key], key);
-      valueInput.addEventListener('change', applyFiltersAndSort);
+      valueInput.addEventListener('change', () => applyFiltersAndSort(false));
+      valueInput.addEventListener('input', () => applyFiltersAndSort(false));
 
 
-      // Create sort button
-      const sortBtn = document.createElement('button');
-      sortBtn.type = 'button';
-      sortBtn.textContent = '↕';
-      sortBtn.onclick = () => sortTable(key);
+      // Replace sort button with sort select
+      const sortSelect = document.createElement('select');
+      sortSelect.name = `${key}_sort`;
+      sortSelect.title = "Sort order";
+      sortSelect.style.width = "auto";
+      [
+        { value: '', label: '⇳ None' },
+        { value: 'asc', label: '↓ Asc' },
+        { value: 'desc', label: '↑ Desc' }
+      ].forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        sortSelect.appendChild(option);
+      });
+      sortSelect.addEventListener('change', (e) => {
+        const direction = e.target.value;
+        if (!direction) {
+          currentSortField = null;
+          currentSortOrder = 'asc';
+        } else {
+          currentSortField = key;
+          currentSortOrder = direction;
+        }
+        // Reset other sort selects
+        filterForm.querySelectorAll('select[name$="_sort"]').forEach(sel => {
+          if (sel !== e.target) sel.value = '';
+        });
+        applyFiltersAndSort(false);
+      });
 
       fieldset.appendChild(legend);
       fieldset.appendChild(operatorSelect);
@@ -160,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const div = document.createElement('div');
       div.classList.add("flex", "flex-row");
       div.appendChild(valueInput);
-      div.appendChild(sortBtn);
+      div.appendChild(sortSelect);  // Add sort select instead of button
 
       fieldset.appendChild(div);
       filterForm.appendChild(fieldset);
@@ -171,6 +204,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add filter form handler (though we'll trigger applyFiltersAndSort on input change)
     filterForm.addEventListener('submit', (e) => e.preventDefault());
+  }
+
+  // Add these new functions for CSV export
+  function exportToCSV() {
+    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
+
+    const request = window.indexedDB.open(DATABASENAME, 1);
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction("sensorData", "readonly");
+      const store = transaction.objectStore("sensorData");
+      const getAllRequest = store.getAll();
+
+      getAllRequest.onsuccess = () => {
+        let records = getAllRequest.result;
+        // Apply current filters to the export
+        const formData = new FormData(filterForm);
+        const filters = {};
+        for (const [key, value] of formData.entries()) {
+          const [field, type] = key.split('_');
+          if (!filters[field]) filters[field] = {};
+          filters[field][type] = value;
+        }
+
+        const filteredRecords = applyFilters(records, filters);
+        const sortedRecords = sortData(filteredRecords, currentSortField);
+
+        // Convert to CSV
+        const headers = Object.keys(sortedRecords[0] || {});
+        const csv = [
+          headers.join(','), // Header row
+          ...sortedRecords.map(row =>
+            headers.map(field => {
+              const value = row[field];
+              // Format dates and numbers
+              if (field === 'date' || value instanceof Date) {
+                return `"${new Date(value).toLocaleString("et-EE")}"`;
+              }
+              if (typeof value === 'number') {
+                return value.toFixed(2);
+              }
+              return `"${value}"`;
+            }).join(',')
+          )
+        ].join('\n');
+
+        // Create and trigger download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `sensor_data_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
+    };
   }
 
   /**
@@ -217,13 +310,22 @@ document.addEventListener('DOMContentLoaded', () => {
    * @returns {Array<Object>}
    */
   function applyFilters(records, filters) {
-    let filteredRecords = [...records];
+    let filteredRecords = records;
     Object.entries(filters).forEach(([field, conditions]) => {
       if (!conditions.value) return;
 
       filteredRecords = filteredRecords.filter(record => {
-        const value = record[field];
-        const filterValue = conditions.value;
+        let value = record[field];
+        let filterValue = conditions.value;
+
+        // Handle type conversions
+        if (field === 'date' || value instanceof Date) {
+          value = new Date(value);
+          filterValue = new Date(filterValue);
+        } else if (typeof record[field] === 'number') {
+          value = Number(value);
+          filterValue = Number(filterValue);
+        }
 
         switch (conditions.operator) {
           case 'eq': return value == filterValue;
@@ -251,42 +353,49 @@ document.addEventListener('DOMContentLoaded', () => {
   function sortData(records, field) {
     if (!field) return records;
 
-    const ascending = currentSortField === field && currentSortOrder === 'asc';
+    const ascending = !(currentSortField === field && currentSortOrder === 'asc');
     currentSortField = field;
-    currentSortOrder = ascending ? 'desc' : 'asc';
+    currentSortOrder = ascending ? 'asc' : 'desc';
 
     return records.sort((a, b) => {
       const aValue = a[field];
       const bValue = b[field];
 
       if (aValue instanceof Date || isDate(aValue)) {
-        return ascending ? new Date(aValue) - new Date(bValue) : new Date(bValue) - new Date(aValue);
+        return ascending ?
+          new Date(aValue) - new Date(bValue) :
+          new Date(bValue) - new Date(aValue);
       }
       if (typeof aValue === "number" || parseFloat(aValue) == aValue) {
-        return ascending ? bValue - aValue : aValue - bValue;
+        return ascending ? aValue - bValue : bValue - aValue;
       }
-      return ascending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+      return ascending ?
+        aValue.localeCompare(bValue) :
+        bValue.localeCompare(aValue);
     });
   }
 
   /**
    * Handle filter and sort
+   * @param {boolean} [loadMore=false] - Whether to load more data or reset
    */
-  async function applyFiltersAndSort() {
+  async function applyFiltersAndSort(loadMore = false) {
     const filterForm = document.getElementById('filterForm');
     if (!filterForm) return;
+
+    if (!loadMore) {
+      globalThis.offset = 0;
+      tbody.innerHTML = ''; // Clear only when reloading
+    }
+
     const formData = new FormData(filterForm);
     const filters = {};
-
-    // Group form data by field
     for (const [key, value] of formData.entries()) {
       const [field, type] = key.split('_');
       if (!filters[field]) filters[field] = {};
       filters[field][type] = value;
     }
-    console.log("filters", filters);
 
-    // Load all data from IndexedDB
     const request = window.indexedDB.open(DATABASENAME, 1);
     request.onsuccess = (event) => {
       const db = event.target.result;
@@ -296,16 +405,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
       getAllRequest.onsuccess = () => {
         let records = getAllRequest.result;
-
-        // Apply filters
         const filteredRecords = applyFilters(records, filters);
-
-        // Apply sorting
         const sortedAndFilteredRecords = sortData(filteredRecords, currentSortField);
 
-        // Update table with filtered and sorted results
-        tbody.innerHTML = '';
-        sortedAndFilteredRecords.forEach(record => addRow(tbody, record));
+        const limit = 50; // Show 50 records at a time
+        const offset = globalThis.offset || 0;
+        const paginatedRecords = sortedAndFilteredRecords.slice(offset, offset + limit);
+
+        // Only increment offset if we have more records to show
+        if (paginatedRecords.length > 0) {
+          globalThis.offset = offset + limit;
+          loadingIndicator.style.display =
+            paginatedRecords.length >= limit &&
+              globalThis.offset < sortedAndFilteredRecords.length ? 'block' : 'none';
+
+          paginatedRecords.forEach(record => addRow(tbody, record));
+        } else {
+          loadingIndicator.style.display = 'none';
+        }
       };
     };
   }
@@ -404,11 +521,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (records.length > 0) {
           createTableHeaders(records[0]);
           createFilterControls(records[0]);
-          applyFiltersAndSort(); // Apply initial filters and sort if any
+          globalThis.offset = 0; // Reset offset when loading fresh data
+          applyFiltersAndSort();
         } else {
           // Create headers and filters even if no data exists
           createTableHeaders(defaultDataStructure);
           createFilterControls(defaultDataStructure);
+          applyFiltersAndSort();
+
         }
       };
     };
@@ -417,6 +537,33 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Error opening database:", event.target.error);
     };
   }
+
+
+  // Add export button at the top
+  const exportButton = document.createElement('button');
+  exportButton.textContent = 'Export CSV';
+  exportButton.type = 'button';
+  exportButton.className = 'export-btn';
+  exportButton.addEventListener('click', exportToCSV);
+  document.querySelector('#TABLE').after(exportButton);
+
+
+  // Add intersection observer for infinite scrolling
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.id = 'loading';
+  loadingIndicator.textContent = 'Loading more...';
+  loadingIndicator.style.display = 'none';
+  document.querySelector('#TABLE').after(loadingIndicator);
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        applyFiltersAndSort(true); // Pass true to load more
+      }
+    });
+  }, { threshold: 0.5 });
+
+  observer.observe(loadingIndicator);
 
   // Load existing data on startup
   loadFromIndexedDB();
@@ -496,18 +643,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (data) {
           console.log('Received data:', data);
-          // Create headers if they don't exist
           if (!thead.hasChildNodes()) {
             createTableHeaders(data);
             createFilterControls(data);
           }
-          // Add to table and save to IndexedDB
           await saveToIndexedDB(data);
-
           console.log('Saved data to IndexedDB:', data);
-
-          // Apply filters and sort after new data is saved
-          applyFiltersAndSort();
+          applyFiltersAndSort(false); // Pass false to reload
         }
       });
 

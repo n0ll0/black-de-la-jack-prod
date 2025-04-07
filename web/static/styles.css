@@ -1,8 +1,10 @@
-:root {
+:root
+{
   --border: 1px solid;
 }
 
-body {
+body
+{
   font-family: 'Roboto', sans-serif;
   background-color: #f5f5f5;
   color: #202124;
@@ -10,15 +12,18 @@ body {
   width: 100%;
 }
 
-main {
+main
+{
   width: 100%;
 }
 
-h1 {
+h1
+{
   color: #202124;
 }
 
-table {
+table
+{
   width: 100%;
   max-width: max-content;
   border-collapse: collapse;
@@ -26,13 +31,15 @@ table {
   margin-top: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
+
 /* 
 tbody, thead {
   overflow-x: scroll;
 } */
 
 /* Header styling */
-th {
+th
+{
   background-color: #f1f3f4;
   color: #5f6368;
   font-size: 14px;
@@ -43,18 +50,21 @@ th {
 }
 
 /* Cell styling */
-td {
+td
+{
   font-size: 14px;
   padding: 12px 15px;
   border-bottom: 1px solid #f1f3f4;
 }
 
 /* Add a subtle hover effect on rows */
-tr:hover td {
+tr:hover td
+{
   background-color: #f1f3f4;
 }
 
-.input-container {
+.input-container
+{
   display: flex;
   width: max-content;
   align-items: flex-start;
@@ -66,71 +76,91 @@ tr:hover td {
   background-color: #dddddd;
 }
 
-.input-container:has(input:invalid) {
+.input-container:has(input:invalid)
+{
   color: red;
 }
 
-.input-container input {
+.input-container input
+{
   padding: 1em;
   border: var(--border) #202124;
   border-radius: 1em;
 }
 
-.flex {
+.flex
+{
   display: flex;
 }
 
-.flex-row {
+.flex-row
+{
   flex-direction: row;
 }
 
-.flex-column {
+.flex-column
+{
   flex-direction: column;
 }
 
-.flex-center {
+.flex-center
+{
   justify-content: center;
   align-items: center;
 }
 
-.flex-space-between {
+.flex-space-between
+{
   justify-content: space-between;
 }
 
-.flex-space-around {
+.flex-space-around
+{
   justify-content: space-around;
 }
 
-.flex-wrap {
+.flex-wrap
+{
   flex-wrap: wrap;
 }
 
-.flex-1 {
+.flex-1
+{
   flex: 1;
 }
 
-.flex-2 {
+.flex-2
+{
   flex: 2;
 }
 
-.items-center {
+.items-center
+{
   align-items: center;
 }
-.justify-center {
+
+.justify-center
+{
   justify-content: center;
 }
-.justify-start {
+
+.justify-start
+{
   justify-content: flex-start;
 }
 
-.w-full {
+.w-full
+{
   width: 100%;
 }
-.w-content {
+
+.w-content
+{
   width: max-content;
 }
 
-.cta {
+.cta
+{
   padding: 1em;
   background-color: #5f6368;
   border-radius: 1em;
@@ -139,7 +169,9 @@ tr:hover td {
   color: #fff;
   text-decoration: none;
 }
-.cta:visited {
+
+.cta:visited
+{
   padding: 1em;
   background-color: #5f6368;
   border-radius: 1em;
@@ -149,26 +181,62 @@ tr:hover td {
   text-decoration: none;
 }
 
-.filters {
+.filters
+{
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(30ch, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
-.filters fieldset {
+.filters fieldset
+{
   border: 1px solid #ddd;
   border-radius: 0.5em;
   padding: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.filters fieldset.collapsed > *:not(legend)
+{
+  display: none;
+}
+
+.filters fieldset legend
+{
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  user-select: none;
+}
+
+.filters fieldset legend:hover
+{
+  background: #f1f3f4;
+  border-radius: 4px;
+}
+
+.filters fieldset legend::after
+{
+  content: '▼';
+  margin-left: 0.5rem;
+  font-size: 0.8em;
+  transition: transform 0.3s ease;
+}
+
+.filters fieldset.collapsed legend::after
+{
+  transform: rotate(-90deg);
 }
 
 .filters select,
-.filters input {
+.filters input
+{
   width: 100%;
   margin: 0.25rem 0;
 }
 
-.filters button[type="submit"] {
+.filters button[type="submit"]
+{
   grid-column: 1 / -2;
   padding: 0.5rem;
   background: #007bff;
@@ -178,8 +246,26 @@ tr:hover td {
   cursor: pointer;
 }
 
-.filters button[type="button"] {
+.filters button[type="button"]
+{
   padding: 0.25rem;
   margin-left: 0.5rem;
   cursor: pointer;
+}
+
+.export-btn
+{
+  grid-column: 1 / -1;
+  padding: 0.5rem 1rem;
+  background: #34a853;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.export-btn:hover
+{
+  background: #2d9147;
 }
