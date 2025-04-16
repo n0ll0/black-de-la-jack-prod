@@ -8,7 +8,9 @@ The Outpost Data Transmission and Monitoring System is an innovative platform de
   * Sensors:
     * DHT22: Temperature and Humidity Sensor
     * CO₂ (Carbon Dioxide Levels)
-    * PM (Particulate Matter)
+    * MQ2: Gas Sensor (LPG, smoke, alcohol, propane, hydrogen, methane, and carbon monoxide concentrations in the air)
+    * PM2.5 & PM10 (Particulate Matter)
+    
   Other Components:
     OLED Display for troubleshooting and monitoring
 * Data Transmission
