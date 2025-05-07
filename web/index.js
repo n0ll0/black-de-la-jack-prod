@@ -674,6 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       characteristic.addEventListener('characteristicvaluechanged', async (event) => {
+        alert(event);
         const value = event.target.value;
         const data = DecodeBufferIntoObject(value.buffer);
 
