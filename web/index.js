@@ -637,17 +637,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (deviceError) {
         console.error('Error:', deviceError);
         alert('Error:' + JSON.stringify(deviceError));
-        
+
         return;
       }
       console.log('Got device:', device);
 
-      // let gattServer = await device.gatt.connect();
-
-      const [gattServer, gattServerError] = await tryCatch(
-        device.connect()
-      );
-      if (gattServerError) {
+      // Correct Bluetooth GATT connection
+      let gattServer;
+      try {
+        gattServer = await device.gatt.connect();
+      } catch (gattServerError) {
         console.error('Error:', gattServerError);
         alert('Error:' + JSON.stringify(gattServerError));
         return;
