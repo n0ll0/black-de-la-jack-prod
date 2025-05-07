@@ -680,14 +680,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = DecodeBufferIntoObject(buffer);
 
         if (data) {
-          console.log('Received data:', data);
-          if (!thead.hasChildNodes()) {
-            createTableHeaders(data);
-            createFilterControls(data);
-          }
           await saveToDB(data);
+          console.log('Received data:', data);
+          try {
+            if (!thead.hasChildNodes()) {
+              createTableHeaders(data);
+              createFilterControls(data);
+            }
+          } catch (e) {
+            console.error(e);
+          }
           console.log('Saved data to IndexedDB:', data);
-          applyFiltersAndSort(false); // Pass false to reload
+          try {
+            applyFiltersAndSort(false); // Pass false to reload
+          } catch (e) {
+            console.error(e);
+          }
         }
       });
 
@@ -699,12 +707,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const value = await characteristic.readValue();
         const buffer = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
         const data = DecodeBufferIntoObject(buffer);
+        await saveToDB(data);
         if (data) {
           if (!thead.hasChildNodes()) {
             createTableHeaders(data);
             createFilterControls(data);
           }
-          await saveToDB(data);
           applyFiltersAndSort(false);
         }
       } catch (err) {
