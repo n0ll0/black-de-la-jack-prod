@@ -122,12 +122,52 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function createFilterControls(data) {
     console.log('Creating filter controls', data);
-    const filterForm = document.createElement('form');
+
+    // --- MULTI-SELECT DROPDOWN FOR FILTER VISIBILITY ---
+    let filterDropdown = document.getElementById('filterDropdown');
+    if (filterDropdown) filterDropdown.remove();
+
+    filterDropdown = document.createElement('select');
+    filterDropdown.id = 'filterDropdown';
+    filterDropdown.multiple = true;
+    filterDropdown.ariaMultiSelectable = true;
+    // filterDropdown.style.height = '18px';
+    filterDropdown.size = Math.min(Object.keys(data).length, 8);
+    filterDropdown.style.marginBottom = "1em";
+    filterDropdown.style.display = "block";
+    filterDropdown.title = "Toggle filter fields";
+
+    Object.keys(data).forEach(key => {
+      const option = document.createElement('option');
+      option.value = key;
+      option.selected = true; // All filters visible by default
+      option.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+      filterDropdown.appendChild(option);
+    });
+
+    // Handler to show/hide filter fieldsets
+    filterDropdown.addEventListener('change', () => {
+      const selected = Array.from(filterDropdown.selectedOptions).map(opt => opt.value);
+      document.querySelectorAll('#filterForm fieldset').forEach(fs => {
+        fs.style.display = selected.includes(fs.dataset.key) ? '' : 'none';
+      });
+    });
+
+    // Insert dropdown before the table
+    const tableElem = document.querySelector('#TABLE');
+    tableElem.insertAdjacentElement('beforebegin', filterDropdown);
+
+    // --- FILTER FORM ---
+    let filterForm = document.getElementById('filterForm');
+    if (filterForm) filterForm.remove();
+
+    filterForm = document.createElement('form');
     filterForm.id = 'filterForm';
     filterForm.className = 'filters';
 
     Object.keys(data).forEach(key => {
       const fieldset = document.createElement('fieldset');
+      fieldset.dataset.key = key;
       const legend = document.createElement('legend');
       legend.textContent = key.charAt(0).toUpperCase() + key.slice(1);
       fieldset.classList.add('collapsed'); // Start collapsed
@@ -207,11 +247,14 @@ document.addEventListener('DOMContentLoaded', () => {
       filterForm.appendChild(fieldset);
     });
 
-    // Insert form before table
-    document.querySelector('#TABLE').insertAdjacentElement('beforebegin', filterForm);
+    // Insert form after the dropdown, before the table
+    filterDropdown.insertAdjacentElement('afterend', filterForm);
 
     // Add filter form handler (though we'll trigger applyFiltersAndSort on input change)
     filterForm.addEventListener('submit', (e) => e.preventDefault());
+
+    // Initial visibility sync
+    filterDropdown.dispatchEvent(new Event('change'));
   }
 
   // Add these new functions for CSV export
@@ -467,8 +510,10 @@ document.addEventListener('DOMContentLoaded', () => {
       /** @type {Date | number | string} */
       const value = data[key];
       row.dataset[key] = value;
-      if (value instanceof Date || key === 'date') {
-        cell.textContent = value.toLocaleString("et-EE");
+      if (key === 'date') {
+        // Handle ISO string date
+        let dateObj = value instanceof Date ? value : new Date(value);
+        cell.textContent = isNaN(dateObj.getTime()) ? value : dateObj.toLocaleString("et-EE");
       } else if (typeof value === 'number') {
         cell.textContent = value.toFixed(2);
       } else {
@@ -593,38 +638,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const bluetooth = navigator.bluetooth;
 
-    if (!bluetooth.getAvailability()) {
+    if (!await bluetooth.getAvailability()) {
       console.log("Bluetooth not available");
       return;
     }
 
     try {
-      const [device, deviceError] = await tryCatch(bluetooth.requestDevice({
-        acceptAllDevices: false,
-        filters: [{ name: "BlackDeLaJack" }],
-        optionalServices: [your_service_uuid] // Add service UUIDs here
-      }));
+      const [device, deviceError] = await tryCatch(() =>
+        bluetooth.requestDevice({
+          acceptAllDevices: false,
+          filters: [{ name: "BlackDeLaJack" }],
+          optionalServices: [your_service_uuid]
+        })
+      );
       if (deviceError) {
         console.error('Error:', deviceError);
         return;
       }
       console.log('Got device:', device);
 
-      if (!device.gatt.connected) {
-        await device.gatt.connect();
-      }
+      // Only connect if not already connected
+      let gattServer = device.gatt.connected ? device.gatt : await device.gatt.connect();
 
-      const [gattServer, gattError] = await tryCatch(device.gatt.connect());
-      if (gattError) {
-        console.error('Error:', gattError);
-        return;
-      }
-      const [service, serviceError] = await tryCatch(gattServer.getPrimaryService(your_service_uuid));
+      const [service, serviceError] = await tryCatch(() =>
+        gattServer.getPrimaryService(your_service_uuid)
+      );
       if (serviceError) {
         console.error('Error:', serviceError);
         return;
       }
-      const [characteristic, characteristicError] = await tryCatch(service.getCharacteristic(your_characteristic_uuid));
+      const [characteristic, characteristicError] = await tryCatch(() =>
+        service.getCharacteristic(your_characteristic_uuid)
+      );
       if (characteristicError) {
         console.error('Error:', characteristicError);
         return;
@@ -645,9 +690,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      // Listen for notifications
       characteristic.addEventListener('characteristicvaluechanged', async (event) => {
         const value = event.target.value;
-        const data = DecodeBufferIntoObject(value.buffer);
+        // value is a DataView
+        const buffer = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+        const data = DecodeBufferIntoObject(buffer);
 
         if (data) {
           console.log('Received data:', data);
@@ -661,12 +709,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
+      // Start notifications
       await characteristic.startNotifications();
+
+      // Also read the current value once (in case notifications are not sent until next update)
+      try {
+        const value = await characteristic.readValue();
+        const buffer = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+        const data = DecodeBufferIntoObject(buffer);
+        if (data) {
+          if (!thead.hasChildNodes()) {
+            createTableHeaders(data);
+            createFilterControls(data);
+          }
+          await saveToIndexedDB(data);
+          applyFiltersAndSort(false);
+        }
+      } catch (err) {
+        console.warn('Could not read initial value:', err);
+      }
+
       console.log('Started notifications');
     } catch (error) {
       console.error('Error:', error);
     }
-
   });
 
   document.getElementById('install')?.addEventListener('click', async () => {
