@@ -668,6 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return data;
         } catch (error) {
           console.error('Error decoding data:', error);
+          alert("Error: incoming data no bueno" + jsonString);
           return null;
         }
       }
