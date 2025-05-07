@@ -622,6 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!await bluetooth.getAvailability()) {
       console.log("Bluetooth not available");
+      alert('Error: Bluetooth not available');
       return;
     }
 
@@ -635,6 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       if (deviceError) {
         console.error('Error:', deviceError);
+        alert('Error:' + JSON.stringify(deviceError));
+        
         return;
       }
       console.log('Got device:', device);
