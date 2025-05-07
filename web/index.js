@@ -660,25 +660,21 @@ document.addEventListener('DOMContentLoaded', () => {
       // Add a buffer to accumulate incoming chunks
       let bluetoothChunkBuffer = '';
 
-      characteristic.addEventListener('characteristicvaluechanged', async (event) => {
-        // Get the chunk as a string and append to buffer
-        const value = event.target.value;
+      // Handler for incoming data chunks
+      async function handleBluetoothChunk(value) {
         const decoder = new TextDecoder();
         const chunk = decoder.decode(value);
         bluetoothChunkBuffer += chunk;
 
-        // Try to parse as JSON (handle multiple messages if needed)
         let parsed = false;
         while (bluetoothChunkBuffer.length > 0) {
           try {
-            // Find the first '{' and last '}' to extract a JSON object
             const start = bluetoothChunkBuffer.indexOf('{');
             const end = bluetoothChunkBuffer.lastIndexOf('}');
             if (start === -1 || end === -1 || end <= start) break;
             const jsonString = bluetoothChunkBuffer.slice(start, end + 1);
             const data = JSON.parse(jsonString);
             data["date"] = new Date().toISOString();
-            // Remove the parsed message from the buffer
             bluetoothChunkBuffer = bluetoothChunkBuffer.slice(end + 1);
             parsed = true;
 
@@ -697,25 +693,41 @@ document.addEventListener('DOMContentLoaded', () => {
                   createTableHeaders(data);
                   createFilterControls(data);
                 }
-                applyFiltersAndSort(true); // Pass false to reload
+                applyFiltersAndSort(true);
               } catch (e) {
                 alert('Error: table dont work right');
               }
             }
           } catch (err) {
-            // Not enough data for a full JSON object yet
             break;
           }
         }
         if (!parsed) {
-          // Optionally, log or handle incomplete buffer
-          // console.log('Waiting for more data, current buffer:', bluetoothChunkBuffer);
           alert('Controller sent malformed or incomplete data: ' + bluetoothChunkBuffer);
         }
-      });
+      }
 
-      await characteristic.startNotifications();
-      console.log('Started notifications');
+      // Prefer notifications if supported, otherwise fallback to polling
+      if ('addEventListener' in characteristic && 'startNotifications' in characteristic) {
+        characteristic.addEventListener('characteristicvaluechanged', async (event) => {
+          await handleBluetoothChunk(event.target.value);
+        });
+        await characteristic.startNotifications();
+        console.log('Started notifications');
+      } else if ('readValue' in characteristic) {
+        alert('Notifications not supported, falling back to polling...');
+        setInterval(async () => {
+          try {
+            const value = await characteristic.readValue();
+            await handleBluetoothChunk(value);
+          } catch (e) {
+            console.error('Polling read error:', e);
+          }
+        }, 2000);
+      } else {
+        alert('Bluetooth GATT characteristic does not support notifications or reading on this device/browser.');
+      }
+
     } catch (error) {
       console.error('Error:', error);
     }
