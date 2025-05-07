@@ -642,7 +642,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       console.log('Got device:', device);
 
-      // Only connect if not already connected
       let gattServer = await device.gatt.connect();
 
       const [service, serviceError] = await tryCatch(() =>
