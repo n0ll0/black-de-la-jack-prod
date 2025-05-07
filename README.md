@@ -1,3 +1,5 @@
+[Black de la Jack production web page](https://n0ll0.github.io/black-de-la-jack-prod/web/)
+
 # Outpost Data Transmission and Monitoring System
 ## Project Overview
 The Outpost Data Transmission and Monitoring System is an innovative platform designed to collect environmental data through an array of sensors and transmit this data to user devices. The system emphasizes efficiency, modularity, and usability, aiming to provide real-time insights to users while adhering to modern UX standards.
