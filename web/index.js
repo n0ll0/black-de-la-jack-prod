@@ -659,9 +659,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       function DecodeBufferIntoObject(buffer) {
         try {
-          // Assume the buffer contains JSON string
+          // Ensure buffer is Uint8Array
+          const uint8Buffer = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+          // Debug: log buffer length
+          console.log('Buffer length:', uint8Buffer.length);
           const decoder = new TextDecoder();
-          const jsonString = decoder.decode(buffer);
+          const jsonString = decoder.decode(uint8Buffer);
+          console.log('Decoded string:', jsonString);
           alert(jsonString);
           const data = JSON.parse(jsonString);
           data["date"] = new Date().toISOString();
