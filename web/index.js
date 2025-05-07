@@ -682,7 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
           try {
             await saveToDB(data);
           } catch (e) {
-            alert("Error: " + e)
+            alert("Error: cannot save to DB")
           }
           console.log('Saved data to IndexedDB:', data);
           try {
@@ -690,10 +690,10 @@ document.addEventListener('DOMContentLoaded', () => {
               createTableHeaders(data);
               createFilterControls(data);
             }
+            applyFiltersAndSort(false); // Pass false to reload
           } catch (e) {
-            alert('Error: ' + e);
+            alert('Error: table dont work right');
           }
-          applyFiltersAndSort(false); // Pass false to reload
         }
       });
 
