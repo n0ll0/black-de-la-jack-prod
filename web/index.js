@@ -710,6 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!parsed) {
           // Optionally, log or handle incomplete buffer
           // console.log('Waiting for more data, current buffer:', bluetoothChunkBuffer);
+          alert('Controller sent malformed or incomplete data: ' + bluetoothChunkBuffer);
         }
       });
 
