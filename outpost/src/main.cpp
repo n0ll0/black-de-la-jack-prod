@@ -180,9 +180,8 @@ void loop()
         doc["mq2"] = mq2Value;
         doc["pm2_5"] = pm2_5;
         doc["pm10"] = pm10;
-        doc["location"] = "kitchen";
 
-        char jsonBuffer[256];
+        char jsonBuffer[1024];
         serializeJson(doc, jsonBuffer);
 
         // Append a delimiter to mark the end of the message
