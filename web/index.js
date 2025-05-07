@@ -32,10 +32,14 @@ function tryCatch(input) {
 // Function to save new sensor data
 async function saveRandomData() {
   const data = {
+    temperature: 0,
+    humidity: 0,
+    co2: 0,
+    mq2: 0,
+    pm2_5: 0,
+    pm10: 0,
+    location: 0,
     date: new Date().toISOString(),
-    temperature: (Math.random() * 30 + 0),
-    humidity: (Math.random() * 70 + 50),
-    particles: (Math.random() * 70 + 20),
   };
 
   // Open the database
@@ -87,10 +91,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Define the default structure of the data
   const defaultDataStructure = {
-    date: "2025-03-28T00:00:00.000Z",
     temperature: 0,
     humidity: 0,
-    particles: 0,
+    co2: 0,
+    mq2: 0,
+    pm2_5: 0,
+    pm10: 0,
+    location: 0,
+    date: new Date().toISOString(),
   };
 
   /**
