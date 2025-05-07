@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           console.log('Saved data to IndexedDB:', data);
           try {
-            applyFiltersAndSort(false); // Pass false to reload
+            applyFiltersAndSort(true); // Pass false to reload
           } catch (e) {
             console.error(e);
           }
@@ -726,7 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createTableHeaders(data);
             createFilterControls(data);
           }
-          applyFiltersAndSort(false);
+          applyFiltersAndSort(true);
         }
       } catch (err) {
         console.warn('Could not read initial value:', err);
