@@ -680,7 +680,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = DecodeBufferIntoObject(buffer);
 
         if (data) {
-          await saveToDB(data);
+          try {
+            await saveToDB(data);
+          } catch (e) {
+            alert(e);
+          }
           console.log('Received data:', data);
           try {
             if (!thead.hasChildNodes()) {
@@ -707,7 +711,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const value = await characteristic.readValue();
         const buffer = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
         const data = DecodeBufferIntoObject(buffer);
-        await saveToDB(data);
+        try {
+          await saveToDB(data);
+        } catch (e) {
+          alert(e);
+        }
         if (data) {
           if (!thead.hasChildNodes()) {
             createTableHeaders(data);
