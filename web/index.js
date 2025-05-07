@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Got device:', device);
 
       // Only connect if not already connected
-      let gattServer = device.gatt.connected ? device.gatt : await device.gatt.connect();
+      let gattServer = await device.gatt.connect();
 
       const [service, serviceError] = await tryCatch(() =>
         gattServer.getPrimaryService(your_service_uuid)
