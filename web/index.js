@@ -662,6 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Assume the buffer contains JSON string
           const decoder = new TextDecoder();
           const jsonString = decoder.decode(buffer);
+          alert(jsonString);
           const data = JSON.parse(jsonString);
           data["date"] = new Date().toISOString();
           console.log('Decoded data:', data);
@@ -676,7 +677,9 @@ document.addEventListener('DOMContentLoaded', () => {
       characteristic.addEventListener('characteristicvaluechanged', async (event) => {
         alert(event);
         const value = event.target.value;
+        alert(value);
         const data = DecodeBufferIntoObject(value.buffer);
+        alert(data);
 
         if (data) {
           console.log('Received data:', data);
@@ -693,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
               createTableHeaders(data);
               createFilterControls(data);
             }
-            applyFiltersAndSort(false); // Pass false to reload
+            applyFiltersAndSort(true); // Pass false to reload
           } catch (e) {
             alert('Error: table dont work right');
           }
