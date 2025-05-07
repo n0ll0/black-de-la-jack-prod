@@ -647,6 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       if (serviceError) {
         console.error('Error:', serviceError);
+        alert('Error:' + JSON.stringify(serviceError));
         return;
       }
       const [characteristic, characteristicError] = await tryCatch(() =>
@@ -654,6 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       if (characteristicError) {
         console.error('Error:', characteristicError);
+        alert('Error:' + JSON.stringify(characteristicError));
         return;
       }
 
@@ -668,6 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return data;
         } catch (error) {
           console.error('Error decoding data:', error);
+          alert('Error:' + JSON.stringify(error));
           return null;
         }
       }
