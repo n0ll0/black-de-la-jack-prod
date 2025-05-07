@@ -11,19 +11,19 @@
 #include <time.h>
 #include <ArduinoJson.h>
 
-#define DEBUG
-#define DEBUG1
+// #define DEBUG
+// #define DEBUG_LOGS
 
-#define SERVICE_UUID        "711661ab-a17a-4c7f-bc9f-de1f070a66f4"
+#define SERVICE_UUID "711661ab-a17a-4c7f-bc9f-de1f070a66f4"
 #define CHARACTERISTIC_UUID "4d4bc742-f257-41e5-b268-6bc4f3d1ea73"
 
-//DHT22
+// DHT22
 #define DHTPIN 2
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
 // MQ2
-#define MQ2_PIN 36  // Analog Pin
+#define MQ2_PIN 36 // Analog Pin
 
 // // SPS30 (I2C)
 // SPS30 sps30;  // GPIO 21 (SDA) & GPIO 22 (SCL)
@@ -33,37 +33,45 @@ DHT dht(DHTPIN, DHTTYPE);
 #define TX_PIN 17
 
 // MH-Z19B (Serial)
-HardwareSerial mySerial(1);  // Use HardwareSerial 1
-MHZ19 mhz19(&mySerial); 
+HardwareSerial mySerial(1); // Use HardwareSerial 1
+MHZ19 mhz19(&mySerial);
 
-BLEServer* pServer = nullptr;
-BLECharacteristic* pCharacteristic = nullptr;
+BLEServer *pServer = nullptr;
+BLECharacteristic *pCharacteristic = nullptr;
 bool deviceConnected = false;
 
-class ServerCallbacks: public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) {
+class ServerCallbacks : public BLEServerCallbacks
+{
+  void onConnect(BLEServer *pServer)
+  {
     deviceConnected = true;
     Serial.println("BLE device connected");
   }
 
-  void onDisconnect(BLEServer* pServer) {
+  void onDisconnect(BLEServer *pServer)
+  {
     deviceConnected = false;
+#ifdef DEBUG_LOGS
     Serial.println("BLE device disconnected");
+#endif
     pServer->getAdvertising()->start(); // Restart advertising
+#ifdef DEBUG_LOGS
     Serial.println("Advertising restarted");
+#endif
   }
 };
 
-void setup() {
-  #ifdef DEBUG1
+void setup()
+{
+#ifdef DEBUG_LOGS
   Serial.begin(9600);
 
-  #endif
+#endif
   // DHT setup
   dht.begin();
 
- // Initialize the MH-Z19 sensor
- mhz19.setAutoCalibration(true);
+  // Initialize the MH-Z19 sensor
+  mhz19.setAutoCalibration(true);
 
   // // SPS30 setup
   // Wire.begin();
@@ -82,9 +90,8 @@ void setup() {
   BLEService *pService = pServer->createService(SERVICE_UUID);
 
   pCharacteristic = pService->createCharacteristic(
-    CHARACTERISTIC_UUID,
-    BLECharacteristic::PROPERTY_NOTIFY
-  );
+      CHARACTERISTIC_UUID,
+      BLECharacteristic::PROPERTY_NOTIFY);
 
   pCharacteristic->addDescriptor(new BLE2902());
 
@@ -94,67 +101,77 @@ void setup() {
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
   pAdvertising->start();
-  #ifdef DEBUG1
+#ifdef DEBUG_LOGS
   Serial.println("Server started. Waiting for client...");
-  #endif
+#endif
 }
 
-void loop() {
-  if (deviceConnected) {
-    // Read temperature and humidity
-    #ifdef DEBUG
+void loop()
+{
+  if (deviceConnected)
+  {
+// Read temperature and humidity
+#ifdef DEBUG
     float temperature = 1000;
-    #else
+#else
     float temperature = dht.readTemperature();
-    #endif
-    #ifdef DEBUG
+#endif
+#ifdef DEBUG
     float humidity = 727;
-    #else
+#else
     float humidity = dht.readHumidity();
-    #endif
+#endif
 
     // Check if sensor readings are valid
-    if (isnan(temperature) || isnan(humidity)) {
-      #ifdef DEBUG
+    if (isnan(temperature) || isnan(humidity))
+    {
+#ifdef DEBUG
       delay(10000);
-      #endif
+#endif
+#ifdef DEBUG_LOGS
       Serial.println("Failed to read from DHT sensor!");
+#endif
+
       return;
     }
 
-    // Read CO2
-    #ifdef DEBUG
+// Read CO2
+#ifdef DEBUG
     int co2 = 400;
-    #else
+#else
     int co2 = mhz19.getCO2();
-    if (co2 == -1) {
+    if (co2 == -1)
+    {
+#ifdef DEBUG_LOGS
       Serial.println("Failed to read from MH-Z19B!");
+#endif
     }
-    #endif
 
-    // Read gas concentration
-    #ifdef DEBUG
+#endif
+
+// Read gas concentration
+#ifdef DEBUG
     int mq2Value = 512;
-    #else
+#else
     int mq2Value = analogRead(MQ2_PIN);
-    #endif
+#endif
 
-    // Read particulate matter (PM2.5, PM10)
-    #ifdef DEBUG
+// Read particulate matter (PM2.5, PM10)
+#ifdef DEBUG
     float pm2_5 = 25.5;
     float pm10 = 40.5;
-    #else
+#else
     // float pm2_5, pm10;
     // if (sps30.readReadyFlag() && sps30.readMeasurement()) {
     //   pm2_5 = sps30.getPM2_5();
     //   pm10 = sps30.getPM10();
-    // } 
+    // }
     // else {
     //   pm2_5 = pm10 = -1;  // If fails to read
     // }
     float pm2_5 = 25.5;
     float pm10 = 40.5;
-    #endif
+#endif
 
     JsonDocument doc;
     doc["temperature"] = temperature;
@@ -169,16 +186,18 @@ void loop() {
     serializeJson(doc, jsonBuffer);
 
     // Send as BLE notification
-    pCharacteristic->setValue((uint8_t*)jsonBuffer, strlen(jsonBuffer));
+    pCharacteristic->setValue((uint8_t *)jsonBuffer, strlen(jsonBuffer));
     pCharacteristic->notify();
-    #ifdef DEBUG1
+#ifdef DEBUG_LOGS
     Serial.print("Sent via BLE: ");
     Serial.println(jsonBuffer);
-    #endif
-  } else {
-    #ifdef DEBUG1
+#endif
+  }
+  else
+  {
+#ifdef DEBUG_LOGS
     Serial.println("No BLE client connected.");
-    #endif
+#endif
   }
 
   delay(5000); // send every 5 second
