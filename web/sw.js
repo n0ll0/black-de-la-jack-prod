@@ -4,10 +4,10 @@ self.addEventListener("install", evt => {
 	evt.waitUntil(
 		caches.open("Demo")
 			.then(cache => cache.addAll([
-				"index.html",
+				// "index.html",
 				"static/site.webmanifest",
 				"static/Black de la Jack.svg",
-				"static/index.js"
+				// "static/index.js"
 			]))
 			.catch(err => console.error(err))
 	);
