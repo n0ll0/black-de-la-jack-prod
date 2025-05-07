@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const [device, deviceError] = await tryCatch(()=>
+      const [device, deviceError] = await tryCatch(
         bluetooth.requestDevice({
           acceptAllDevices: false,
           filters: [{ name: "BlackDeLaJack" }],
@@ -642,9 +642,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       console.log('Got device:', device);
 
-      let gattServer = await device.gatt.connect();
+      // let gattServer = await device.gatt.connect();
 
-      const [service, serviceError] = await tryCatch(() =>
+      const [gattServer, gattServerError] = await tryCatch(
+        device.connect()
+      );
+      if (gattError) {
+        console.error('Error:', gattError);
+        alert('Error:' + JSON.stringify(gattError));
+        return;
+      }
+
+      const [service, serviceError] = await tryCatch(
         gattServer.getPrimaryService(your_service_uuid)
       );
       if (serviceError) {
@@ -652,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Error:' + JSON.stringify(serviceError));
         return;
       }
-      const [characteristic, characteristicError] = await tryCatch(() =>
+      const [characteristic, characteristicError] = await tryCatch(
         service.getCharacteristic(your_characteristic_uuid)
       );
       if (characteristicError) {
