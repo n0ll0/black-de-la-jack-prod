@@ -29,54 +29,51 @@ function tryCatch(input) {
   }
 }
 
-
-/**
- * Save data to IndexedDB and resolve with the stored data
- * @param {Object} data
- * @returns {Promise<Object>}
- */
-async function saveToDB(data) {
-  return new Promise((resolve, reject) => {
-    const request = window.indexedDB.open(DATABASENAME, 1);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains("sensorData")) {
-        db.createObjectStore("sensorData", { keyPath: "date" });
-      }
-    };
-
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      const transaction = db.transaction("sensorData", "readwrite");
-      const store = transaction.objectStore("sensorData");
-      const record = { ...data, date: data.date || new Date().toISOString() };
-      const addReq = store.add(record);
-
-      addReq.onsuccess = () => resolve(record);
-      addReq.onerror = (e) => reject(e.target?.error || e);
-    };
-
-    request.onerror = (event) => {
-      reject(event.target.error);
-    };
-  });
-}
-
 // Function to save new sensor data
 async function saveRandomData() {
   const data = {
-    temperature: 0,
-    humidity: 0,
-    co2: 0,
-    mq2: 0,
-    pm2_5: 0,
-    pm10: 0,
-    location: 0,
     date: new Date().toISOString(),
+    temperature: (Math.random() * 30 + 0),
+    humidity: (Math.random() * 70 + 50),
+    particles: (Math.random() * 70 + 20),
   };
 
-  await saveToDB(data);
+  // Open the database
+  const request = window.indexedDB.open(DATABASENAME, 1);
+
+  // Handle database setup or upgrade
+  request.onupgradeneeded = function (event) {
+    const db = event.target?.result;
+
+    // Create an object store if it doesn't exist
+    if (!db.objectStoreNames.contains("sensorData")) {
+      db.createObjectStore("sensorData", { keyPath: "date" });
+    }
+  };
+
+  // Handle success or errors
+  request.onsuccess = function (event) {
+    const db = event.target.result;
+
+    // Start a transaction
+    const transaction = db.transaction("sensorData", "readwrite");
+    const store = transaction.objectStore("sensorData");
+
+    // Add the new data
+    const addRequest = store.add(data);
+
+    addRequest.onsuccess = function () {
+      console.log("Data saved successfully:", data);
+    };
+
+    addRequest.onerror = function (error) {
+      console.error("Error saving data:", error);
+    };
+  };
+
+  request.onerror = function (error) {
+    console.error("Error opening database:", error);
+  };
 }
 
 
@@ -90,14 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Define the default structure of the data
   const defaultDataStructure = {
+    date: "2025-03-28T00:00:00.000Z",
     temperature: 0,
     humidity: 0,
-    co2: 0,
-    mq2: 0,
-    pm2_5: 0,
-    pm10: 0,
-    location: 0,
-    date: new Date().toISOString(),
+    particles: 0,
   };
 
   /**
@@ -121,52 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function createFilterControls(data) {
     console.log('Creating filter controls', data);
-
-    // --- MULTI-SELECT DROPDOWN FOR FILTER VISIBILITY ---
-    let filterDropdown = document.getElementById('filterDropdown');
-    if (filterDropdown) filterDropdown.remove();
-
-    filterDropdown = document.createElement('select');
-    filterDropdown.id = 'filterDropdown';
-    filterDropdown.multiple = true;
-    filterDropdown.ariaMultiSelectable = true;
-    // filterDropdown.style.height = '18px';
-    filterDropdown.size = Math.min(Object.keys(data).length, 8);
-    filterDropdown.style.marginBottom = "1em";
-    filterDropdown.style.display = "block";
-    filterDropdown.title = "Toggle filter fields";
-
-    Object.keys(data).forEach(key => {
-      const option = document.createElement('option');
-      option.value = key;
-      option.selected = true; // All filters visible by default
-      option.textContent = key.charAt(0).toUpperCase() + key.slice(1);
-      filterDropdown.appendChild(option);
-    });
-
-    // Handler to show/hide filter fieldsets
-    filterDropdown.addEventListener('change', () => {
-      const selected = Array.from(filterDropdown.selectedOptions).map(opt => opt.value);
-      document.querySelectorAll('#filterForm fieldset').forEach(fs => {
-        fs.style.display = selected.includes(fs.dataset.key) ? '' : 'none';
-      });
-    });
-
-    // Insert dropdown before the table
-    const tableElem = document.querySelector('#TABLE');
-    tableElem.insertAdjacentElement('beforebegin', filterDropdown);
-
-    // --- FILTER FORM ---
-    let filterForm = document.getElementById('filterForm');
-    if (filterForm) filterForm.remove();
-
-    filterForm = document.createElement('form');
+    const filterForm = document.createElement('form');
     filterForm.id = 'filterForm';
     filterForm.className = 'filters';
 
     Object.keys(data).forEach(key => {
       const fieldset = document.createElement('fieldset');
-      fieldset.dataset.key = key;
       const legend = document.createElement('legend');
       legend.textContent = key.charAt(0).toUpperCase() + key.slice(1);
       fieldset.classList.add('collapsed'); // Start collapsed
@@ -246,14 +199,11 @@ document.addEventListener('DOMContentLoaded', () => {
       filterForm.appendChild(fieldset);
     });
 
-    // Insert form after the dropdown, before the table
-    filterDropdown.insertAdjacentElement('afterend', filterForm);
+    // Insert form before table
+    document.querySelector('#TABLE').insertAdjacentElement('beforebegin', filterForm);
 
     // Add filter form handler (though we'll trigger applyFiltersAndSort on input change)
     filterForm.addEventListener('submit', (e) => e.preventDefault());
-
-    // Initial visibility sync
-    filterDropdown.dispatchEvent(new Event('change'));
   }
 
   // Add these new functions for CSV export
@@ -509,10 +459,8 @@ document.addEventListener('DOMContentLoaded', () => {
       /** @type {Date | number | string} */
       const value = data[key];
       row.dataset[key] = value;
-      if (key === 'date') {
-        // Handle ISO string date
-        let dateObj = value instanceof Date ? value : new Date(value);
-        cell.textContent = isNaN(dateObj.getTime()) ? value : dateObj.toLocaleString("et-EE");
+      if (value instanceof Date || key === 'date') {
+        cell.textContent = value.toLocaleString("et-EE");
       } else if (typeof value === 'number') {
         cell.textContent = value.toFixed(2);
       } else {
@@ -521,14 +469,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-
   /**
-   * Save data to IndexedDB (deprecated, use saveToDB)
+   * Save data to IndexedDB
    * @param {Object} data
    */
   async function saveToIndexedDB(data) {
-    // Deprecated: use saveToDB
-    await saveToDB(data);
+    const request = window.indexedDB.open(DATABASENAME, 1);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      // Ensure the object store is created
+      if (!db.objectStoreNames.contains("sensorData")) {
+        db.createObjectStore("sensorData", { keyPath: "date" });
+      }
+    };
+
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction("sensorData", "readwrite");
+      const store = transaction.objectStore("sensorData");
+      store.add({ ...data, date: new Date().toISOString() });
+    };
+
+    request.onerror = (event) => {
+      console.error("Error opening database:", event.target.error);
+    };
   }
 
   /**
@@ -620,52 +585,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const bluetooth = navigator.bluetooth;
 
-    if (!await bluetooth.getAvailability()) {
+    if (!bluetooth.getAvailability()) {
       console.log("Bluetooth not available");
-      alert('Error: Bluetooth not available');
       return;
     }
 
     try {
-      const [device, deviceError] = await tryCatch(
-        bluetooth.requestDevice({
-          acceptAllDevices: false,
-          filters: [{ name: "BlackDeLaJack" }],
-          optionalServices: [your_service_uuid]
-        })
-      );
+      const [device, deviceError] = await tryCatch(bluetooth.requestDevice({
+        acceptAllDevices: false,
+        filters: [{ name: "BlackDeLaJack" }],
+        optionalServices: [your_service_uuid] // Add service UUIDs here
+      }));
       if (deviceError) {
         console.error('Error:', deviceError);
-        alert('Error:' + JSON.stringify(deviceError));
-
         return;
       }
       console.log('Got device:', device);
 
-      // Correct Bluetooth GATT connection
-      let gattServer;
-      try {
-        gattServer = await device.gatt.connect();
-      } catch (gattServerError) {
-        console.error('Error:', gattServerError);
-        alert('Error:' + JSON.stringify(gattServerError));
-        return;
+      if (!device.gatt.connected) {
+        await device.gatt.connect();
       }
 
-      const [service, serviceError] = await tryCatch(
-        gattServer.getPrimaryService(your_service_uuid)
-      );
-      if (serviceError) {
-        console.error('Error:', serviceError);
-        alert('Error:' + JSON.stringify(serviceError));
+      const [gattServer, gattError] = await tryCatch(device.gatt.connect());
+      if (gattError) {
+        console.error('Error:', gattError);
         return;
       }
-      const [characteristic, characteristicError] = await tryCatch(
-        service.getCharacteristic(your_characteristic_uuid)
-      );
+      const [service, serviceError] = await tryCatch(gattServer.getPrimaryService(your_service_uuid));
+      if (serviceError) {
+        console.error('Error:', serviceError);
+        return;
+      }
+      const [characteristic, characteristicError] = await tryCatch(service.getCharacteristic(your_characteristic_uuid));
       if (characteristicError) {
         console.error('Error:', characteristicError);
-        alert('Error:' + JSON.stringify(characteristicError));
         return;
       }
 
@@ -680,70 +633,32 @@ document.addEventListener('DOMContentLoaded', () => {
           return data;
         } catch (error) {
           console.error('Error decoding data:', error);
-          alert('Error:' + JSON.stringify(error));
           return null;
         }
       }
 
-      // Listen for notifications
       characteristic.addEventListener('characteristicvaluechanged', async (event) => {
         const value = event.target.value;
-        // value is a DataView
-        const buffer = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
-        const data = DecodeBufferIntoObject(buffer);
+        const data = DecodeBufferIntoObject(value.buffer);
 
         if (data) {
-          try {
-            await saveToDB(data);
-          } catch (e) {
-            alert(e);
-          }
           console.log('Received data:', data);
-          try {
-            if (!thead.hasChildNodes()) {
-              createTableHeaders(data);
-              createFilterControls(data);
-            }
-          } catch (e) {
-            console.error(e);
-          }
-          console.log('Saved data to IndexedDB:', data);
-          try {
-            applyFiltersAndSort(true); // Pass false to reload
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      });
-
-      // Start notifications
-      await characteristic.startNotifications();
-
-      // Also read the current value once (in case notifications are not sent until next update)
-      try {
-        const value = await characteristic.readValue();
-        const buffer = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
-        const data = DecodeBufferIntoObject(buffer);
-        try {
-          await saveToDB(data);
-        } catch (e) {
-          alert(e);
-        }
-        if (data) {
           if (!thead.hasChildNodes()) {
             createTableHeaders(data);
             createFilterControls(data);
           }
-          applyFiltersAndSort(true);
+          await saveToIndexedDB(data);
+          console.log('Saved data to IndexedDB:', data);
+          applyFiltersAndSort(false); // Pass false to reload
         }
-      } catch (err) {
-        console.warn('Could not read initial value:', err);
-      }
+      });
 
+      await characteristic.startNotifications();
       console.log('Started notifications');
     } catch (error) {
       console.error('Error:', error);
     }
+
   });
 
   document.getElementById('install')?.addEventListener('click', async () => {
