@@ -657,53 +657,59 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      function DecodeBufferIntoObject(buffer) {
-        try {
-          // Ensure buffer is Uint8Array
-          const uint8Buffer = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-          // Debug: log buffer length
-          console.log('Buffer length:', uint8Buffer.length);
-          const decoder = new TextDecoder();
-          const jsonString = decoder.decode(uint8Buffer);
-          console.log('Decoded string:', jsonString);
-          alert(jsonString);
-          const data = JSON.parse(jsonString);
-          data["date"] = new Date().toISOString();
-          console.log('Decoded data:', data);
-          return data;
-        } catch (error) {
-          console.error('Error decoding data:', error);
-          alert("Error: incoming data no bueno" + jsonString);
-          return null;
-        }
-      }
+      // Add a buffer to accumulate incoming chunks
+      let bluetoothChunkBuffer = '';
 
       characteristic.addEventListener('characteristicvaluechanged', async (event) => {
-        alert(event);
+        // Get the chunk as a string and append to buffer
         const value = event.target.value;
-        alert(value);
-        const data = DecodeBufferIntoObject(value.buffer);
-        alert(data);
+        const decoder = new TextDecoder();
+        const chunk = decoder.decode(value);
+        bluetoothChunkBuffer += chunk;
 
-        if (data) {
-          console.log('Received data:', data);
-          alert('Received data:' + JSON.stringify(data));
-          
+        // Try to parse as JSON (handle multiple messages if needed)
+        let parsed = false;
+        while (bluetoothChunkBuffer.length > 0) {
           try {
-            await saveToDB(data);
-          } catch (e) {
-            alert("Error: cannot save to DB")
-          }
-          console.log('Saved data to IndexedDB:', data);
-          try {
-            if (!thead.hasChildNodes()) {
-              createTableHeaders(data);
-              createFilterControls(data);
+            // Find the first '{' and last '}' to extract a JSON object
+            const start = bluetoothChunkBuffer.indexOf('{');
+            const end = bluetoothChunkBuffer.lastIndexOf('}');
+            if (start === -1 || end === -1 || end <= start) break;
+            const jsonString = bluetoothChunkBuffer.slice(start, end + 1);
+            const data = JSON.parse(jsonString);
+            data["date"] = new Date().toISOString();
+            // Remove the parsed message from the buffer
+            bluetoothChunkBuffer = bluetoothChunkBuffer.slice(end + 1);
+            parsed = true;
+
+            // ...existing code for handling data...
+            if (data) {
+              console.log('Received data:', data);
+              alert('Received data:' + JSON.stringify(data));
+              try {
+                await saveToDB(data);
+              } catch (e) {
+                alert("Error: cannot save to DB");
+              }
+              console.log('Saved data to IndexedDB:', data);
+              try {
+                if (!thead.hasChildNodes()) {
+                  createTableHeaders(data);
+                  createFilterControls(data);
+                }
+                applyFiltersAndSort(true); // Pass false to reload
+              } catch (e) {
+                alert('Error: table dont work right');
+              }
             }
-            applyFiltersAndSort(true); // Pass false to reload
-          } catch (e) {
-            alert('Error: table dont work right');
+          } catch (err) {
+            // Not enough data for a full JSON object yet
+            break;
           }
+        }
+        if (!parsed) {
+          // Optionally, log or handle incomplete buffer
+          // console.log('Waiting for more data, current buffer:', bluetoothChunkBuffer);
         }
       });
 
