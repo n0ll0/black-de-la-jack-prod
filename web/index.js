@@ -29,6 +29,40 @@ function tryCatch(input) {
   }
 }
 
+
+/**
+ * Save data to IndexedDB and resolve with the stored data
+ * @param {Object} data
+ * @returns {Promise<Object>}
+ */
+async function saveToDB(data) {
+  return new Promise((resolve, reject) => {
+    const request = window.indexedDB.open(DATABASENAME, 1);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains("sensorData")) {
+        db.createObjectStore("sensorData", { keyPath: "date" });
+      }
+    };
+
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction("sensorData", "readwrite");
+      const store = transaction.objectStore("sensorData");
+      const record = { ...data, date: data.date || new Date().toISOString() };
+      const addReq = store.add(record);
+
+      addReq.onsuccess = () => resolve(record);
+      addReq.onerror = (e) => reject(e.target?.error || e);
+    };
+
+    request.onerror = (event) => {
+      reject(event.target.error);
+    };
+  });
+}
+
 // Function to save new sensor data
 async function saveRandomData() {
   const data = {
@@ -42,42 +76,7 @@ async function saveRandomData() {
     date: new Date().toISOString(),
   };
 
-  // Open the database
-  const request = window.indexedDB.open(DATABASENAME, 1);
-
-  // Handle database setup or upgrade
-  request.onupgradeneeded = function (event) {
-    const db = event.target?.result;
-
-    // Create an object store if it doesn't exist
-    if (!db.objectStoreNames.contains("sensorData")) {
-      db.createObjectStore("sensorData", { keyPath: "date" });
-    }
-  };
-
-  // Handle success or errors
-  request.onsuccess = function (event) {
-    const db = event.target.result;
-
-    // Start a transaction
-    const transaction = db.transaction("sensorData", "readwrite");
-    const store = transaction.objectStore("sensorData");
-
-    // Add the new data
-    const addRequest = store.add(data);
-
-    addRequest.onsuccess = function () {
-      console.log("Data saved successfully:", data);
-    };
-
-    addRequest.onerror = function (error) {
-      console.error("Error saving data:", error);
-    };
-  };
-
-  request.onerror = function (error) {
-    console.error("Error opening database:", error);
-  };
+  await saveToDB(data);
 }
 
 
@@ -522,31 +521,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+
   /**
-   * Save data to IndexedDB
+   * Save data to IndexedDB (deprecated, use saveToDB)
    * @param {Object} data
    */
   async function saveToIndexedDB(data) {
-    const request = window.indexedDB.open(DATABASENAME, 1);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      // Ensure the object store is created
-      if (!db.objectStoreNames.contains("sensorData")) {
-        db.createObjectStore("sensorData", { keyPath: "date" });
-      }
-    };
-
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      const transaction = db.transaction("sensorData", "readwrite");
-      const store = transaction.objectStore("sensorData");
-      store.add({ ...data, date: new Date().toISOString() });
-    };
-
-    request.onerror = (event) => {
-      console.error("Error opening database:", event.target.error);
-    };
+    // Deprecated: use saveToDB
+    await saveToDB(data);
   }
 
   /**
@@ -644,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const [device, deviceError] = await tryCatch(() =>
+      const [device, deviceError] = await tryCatch(()=>
         bluetooth.requestDevice({
           acceptAllDevices: false,
           filters: [{ name: "BlackDeLaJack" }],
@@ -703,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createTableHeaders(data);
             createFilterControls(data);
           }
-          await saveToIndexedDB(data);
+          await saveToDB(data);
           console.log('Saved data to IndexedDB:', data);
           applyFiltersAndSort(false); // Pass false to reload
         }
@@ -722,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createTableHeaders(data);
             createFilterControls(data);
           }
-          await saveToIndexedDB(data);
+          await saveToDB(data);
           applyFiltersAndSort(false);
         }
       } catch (err) {
