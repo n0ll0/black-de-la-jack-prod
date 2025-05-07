@@ -647,9 +647,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const [gattServer, gattServerError] = await tryCatch(
         device.connect()
       );
-      if (gattError) {
-        console.error('Error:', gattError);
-        alert('Error:' + JSON.stringify(gattError));
+      if (gattServerError) {
+        console.error('Error:', gattServerError);
+        alert('Error:' + JSON.stringify(gattServerError));
         return;
       }
 
