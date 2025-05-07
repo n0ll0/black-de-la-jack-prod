@@ -33,7 +33,7 @@ DHT dht(DHTPIN, DHTTYPE);
 #define TX_PIN 17
 
 // MH-Z19B (Serial)
-HardwareSerial mySerial(1);  // Use HardwareSerial 1, if you prefer using the hardware serial
+HardwareSerial mySerial(1);  // Use HardwareSerial 1
 MHZ19 mhz19(&mySerial); 
 
 BLEServer* pServer = nullptr;
