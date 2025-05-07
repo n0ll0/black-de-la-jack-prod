@@ -72,7 +72,7 @@ async function saveRandomData() {
     mq2: 0,
     pm2_5: 0,
     pm10: 0,
-    location: 0,
+    // location: 0,
     date: new Date().toISOString(),
   };
 
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mq2: 0,
     pm2_5: 0,
     pm10: 0,
-    location: 0,
+    // location: 0,
     date: new Date().toISOString(),
   };
 
@@ -678,6 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (data) {
           console.log('Received data:', data);
+          alert('Received data:' + JSON.stringify(data));
           
           try {
             await saveToDB(data);
