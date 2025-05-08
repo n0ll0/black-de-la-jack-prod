@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredRecords = applyFilters(records, filters);
         const sortedAndFilteredRecords = sortData(filteredRecords, currentSortField);
 
-        const limit = 50; // Show 50 records at a time
+        const limit = 20; // Show 50 records at a time
         const offset = globalThis.offset || 0;
         const paginatedRecords = sortedAndFilteredRecords.slice(offset, offset + limit);
 
@@ -558,12 +558,12 @@ document.addEventListener('DOMContentLoaded', () => {
           createTableHeaders(records[0]);
           createFilterControls(records[0]);
           globalThis.offset = 0; // Reset offset when loading fresh data
-          applyFiltersAndSort();
+          applyFiltersAndSort(false);
         } else {
           // Create headers and filters even if no data exists
           createTableHeaders(defaultDataStructure);
           createFilterControls(defaultDataStructure);
-          applyFiltersAndSort();
+          applyFiltersAndSort(false);
 
         }
       };
@@ -692,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // ...existing code for handling data...
             if (data) {
               console.log('Received data:', data);
-              alert('Received data:' + JSON.stringify(data));
+              // alert('Received data:' + JSON.stringify(data));
               try {
                 await saveToDB(data);
               } catch (e) {
@@ -700,11 +700,12 @@ document.addEventListener('DOMContentLoaded', () => {
               }
               console.log('Saved data to IndexedDB:', data);
               try {
-                if (!thead.hasChildNodes()) {
-                  createTableHeaders(data);
-                  createFilterControls(data);
-                }
-                applyFiltersAndSort(true);
+                // if (!thead.hasChildNodes()) {
+                //   createTableHeaders(data);
+                //   createFilterControls(data);
+                // }
+                // applyFiltersAndSort(true);
+                loadFromIndexedDB();
               } catch (e) {
                 alert('Error: table dont work right\nError: ' + e + '\nData: ' + JSON.stringify(data));
               }
@@ -716,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         if (!parsed) {
-          alert('Controller sent malformed or incomplete data: ' + bluetoothChunkBuffer);
+          // alert('Controller sent malformed or incomplete data: ' + bluetoothChunkBuffer);
           console.error('Controller sent malformed or incomplete data:', bluetoothChunkBuffer);
         }
       }
