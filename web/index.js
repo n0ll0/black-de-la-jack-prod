@@ -58,6 +58,7 @@ async function saveToDB(data) {
     };
 
     request.onerror = (event) => {
+      alert("Error opening database: " + event.target.error + "\nData: " + JSON.stringify(event));
       reject(event.target.error);
     };
   });
@@ -569,6 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     request.onerror = (event) => {
+      alert("Error opening database: " + event.target.error + "\nData: " + JSON.stringify(event));
       console.error("Error opening database:", event.target.error);
     };
   }
@@ -632,28 +634,37 @@ document.addEventListener('DOMContentLoaded', () => {
         optionalServices: [your_service_uuid]
       }));
       if (deviceError) {
-        console.error('Error:', deviceError);
+        alert('Error: ' + deviceError + '\nData: ' + JSON.stringify(device));
+        console.error('Error:', deviceError, device);
         return;
       }
       console.log('Got device:', device);
 
+      if (!device.gatt) {
+        alert('Error: device.gatt is undefined\nData: ' + JSON.stringify(device));
+        console.error('Error: device.gatt is undefined', device);
+        return;
+      }
       if (!device.gatt.connected) {
         await device.gatt.connect();
       }
 
       const [gattServer, gattError] = await tryCatch(device.gatt.connect());
       if (gattError) {
-        console.error('Error:', gattError);
+        alert('Error: ' + gattError + '\nData: ' + JSON.stringify(device));
+        console.error('Error:', gattError, device);
         return;
       }
       const [service, serviceError] = await tryCatch(gattServer.getPrimaryService(your_service_uuid));
       if (serviceError) {
-        console.error('Error:', serviceError);
+        alert('Error: ' + serviceError + '\nData: ' + JSON.stringify(gattServer));
+        console.error('Error:', serviceError, gattServer);
         return;
       }
       const [characteristic, characteristicError] = await tryCatch(service.getCharacteristic(your_characteristic_uuid));
       if (characteristicError) {
-        console.error('Error:', characteristicError);
+        alert('Error: ' + characteristicError + '\nData: ' + JSON.stringify(service));
+        console.error('Error:', characteristicError, service);
         return;
       }
 
@@ -685,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
               try {
                 await saveToDB(data);
               } catch (e) {
-                alert("Error: cannot save to DB");
+                alert("Error: cannot save to DB\nError: " + e + "\nData: " + JSON.stringify(data));
               }
               console.log('Saved data to IndexedDB:', data);
               try {
@@ -695,25 +706,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 applyFiltersAndSort(true);
               } catch (e) {
-                alert('Error: table dont work right');
+                alert('Error: table dont work right\nError: ' + e + '\nData: ' + JSON.stringify(data));
               }
             }
           } catch (err) {
+            alert('Error: failed to parse JSON\nError: ' + err + '\nBuffer: ' + bluetoothChunkBuffer);
+            console.error('Error: failed to parse JSON', err, bluetoothChunkBuffer);
             break;
           }
         }
         if (!parsed) {
           alert('Controller sent malformed or incomplete data: ' + bluetoothChunkBuffer);
+          console.error('Controller sent malformed or incomplete data:', bluetoothChunkBuffer);
         }
       }
 
       // Prefer notifications if supported, otherwise fallback to polling
       if ('addEventListener' in characteristic && 'startNotifications' in characteristic) {
         characteristic.addEventListener('characteristicvaluechanged', async (event) => {
-          await handleBluetoothChunk(event.target.value);
+          try {
+            await handleBluetoothChunk(event.target.value);
+          } catch (err) {
+            alert('Error: ' + err + '\nData: ' + JSON.stringify(event));
+            console.error('Error:', err, event);
+          }
         });
-        await characteristic.startNotifications();
-        console.log('Started notifications');
+        try {
+          await characteristic.startNotifications();
+          console.log('Started notifications');
+        } catch (err) {
+          alert('Error: ' + err + '\nData: ' + JSON.stringify(characteristic));
+          console.error('Error:', err, characteristic);
+        }
       } else if ('readValue' in characteristic) {
         alert('Notifications not supported, falling back to polling...');
         setInterval(async () => {
@@ -721,14 +745,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = await characteristic.readValue();
             await handleBluetoothChunk(value);
           } catch (e) {
-            console.error('Polling read error:', e);
+            alert('Polling read error: ' + e + '\nData: ' + JSON.stringify(characteristic));
+            console.error('Polling read error:', e, characteristic);
           }
         }, 2000);
       } else {
-        alert('Bluetooth GATT characteristic does not support notifications or reading on this device/browser.');
+        alert('Bluetooth GATT characteristic does not support notifications or reading on this device/browser.\nData: ' + JSON.stringify(characteristic));
+        console.error('Bluetooth GATT characteristic does not support notifications or reading on this device/browser.', characteristic);
       }
 
     } catch (error) {
+      alert('Error: ' + error + '\nData: ' + JSON.stringify(error));
       console.error('Error:', error);
     }
 
@@ -767,6 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('PWA installation rejected');
       }
     } catch (error) {
+      alert('Error during installation: ' + error + '\nData: ' + JSON.stringify(error));
       console.error('Error during installation:', error);
     }
   });
@@ -788,6 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     request.onerror = (event) => {
+      alert("Error opening database: " + event.target.error + "\nData: " + JSON.stringify(event));
       console.error("Error opening database:", event.target.error);
       location.reload();
     };
