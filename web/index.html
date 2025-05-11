@@ -55,19 +55,20 @@
       <section id="DATA_VIEW">
         <!-- <button type="button" id="makeFakeData">send some fake sensor data</button> -->
         <button type="button" id="install" hidden>install app</button>
-        <button type="button" id="select_device">Connect to Bluetooth</button>
-
-        <table id="TABLE">
-          <thead>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
-
+        <button type="button" id="select_device" aria-label="Connect to Bluetooth sensor"
+          title="Connect to your BlackDeLaJack Bluetooth device"><span
+            style="font-size:1.2em;vertical-align:middle;line-height:1;">&#128246;</span> Connect to Bluetooth</button>
+        <div id="filtersWrapper"></div>
+        <div class="table-scroll-x">
+          <table id="TABLE">
+            <thead>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+        </div>
       </section>
-
     </main>
-    
   </body>
 
 </html>

@@ -1,31 +1,56 @@
-:root
-{
+* {
+  box-sizing: border-box;
+}
+
+:root {
   --border: 1px solid;
 }
 
-body
-{
+html {
+  overflow-x: hidden;
+}
+
+body {
   font-family: 'Roboto', sans-serif;
   background-color: #f5f5f5;
   color: #202124;
   padding: 1em;
   width: 100%;
+  max-width: 1200px;
+  margin: 2em auto;
+  background: #f5f5f5;
 }
 
-main
-{
+main {
   width: 100%;
+  max-width: 100vw;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-h1
-{
+h1 {
   color: #202124;
+  font-size: min(7vw, inherit);
 }
 
-table
-{
+.table-scroll-x {
   width: 100%;
-  max-width: max-content;
+  max-width: 1100px;
+  margin: 0 auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Prevent margin collapse with filters above */
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+table {
+  min-width: 600px;
+  width: max-content;
   border-collapse: collapse;
   background: #fff;
   margin-top: 20px;
@@ -38,8 +63,7 @@ tbody, thead {
 } */
 
 /* Header styling */
-th
-{
+th {
   background-color: #f1f3f4;
   color: #5f6368;
   font-size: 14px;
@@ -50,21 +74,18 @@ th
 }
 
 /* Cell styling */
-td
-{
+td {
   font-size: 14px;
   padding: 12px 15px;
   border-bottom: 1px solid #f1f3f4;
 }
 
 /* Add a subtle hover effect on rows */
-tr:hover td
-{
+tr:hover td {
   background-color: #f1f3f4;
 }
 
-.input-container
-{
+.input-container {
   display: flex;
   width: max-content;
   align-items: flex-start;
@@ -76,91 +97,74 @@ tr:hover td
   background-color: #dddddd;
 }
 
-.input-container:has(input:invalid)
-{
+.input-container:has(input:invalid) {
   color: red;
 }
 
-.input-container input
-{
+.input-container input {
   padding: 1em;
   border: var(--border) #202124;
   border-radius: 1em;
 }
 
-.flex
-{
+.flex {
   display: flex;
 }
 
-.flex-row
-{
+.flex-row {
   flex-direction: row;
 }
 
-.flex-column
-{
+.flex-column {
   flex-direction: column;
 }
 
-.flex-center
-{
+.flex-center {
   justify-content: center;
   align-items: center;
 }
 
-.flex-space-between
-{
+.flex-space-between {
   justify-content: space-between;
 }
 
-.flex-space-around
-{
+.flex-space-around {
   justify-content: space-around;
 }
 
-.flex-wrap
-{
+.flex-wrap {
   flex-wrap: wrap;
 }
 
-.flex-1
-{
+.flex-1 {
   flex: 1;
 }
 
-.flex-2
-{
+.flex-2 {
   flex: 2;
 }
 
-.items-center
-{
+.items-center {
   align-items: center;
 }
 
-.justify-center
-{
+.justify-center {
   justify-content: center;
 }
 
-.justify-start
-{
+.justify-start {
   justify-content: flex-start;
 }
 
-.w-full
-{
+.w-full {
   width: 100%;
 }
 
-.w-content
-{
+.w-content {
   width: max-content;
 }
 
-.cta
-{
+.cta {
   padding: 1em;
   background-color: #5f6368;
   border-radius: 1em;
@@ -170,8 +174,7 @@ tr:hover td
   text-decoration: none;
 }
 
-.cta:visited
-{
+.cta:visited {
   padding: 1em;
   background-color: #5f6368;
   border-radius: 1em;
@@ -181,62 +184,117 @@ tr:hover td
   text-decoration: none;
 }
 
-.filters
-{
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(30ch, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+.filters {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 1em auto;
+  display: flex;
+  flex-flow: row wrap;
+  gap: 1.5rem;
+  background: #f8fafc;
+  border-radius: 1em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  padding: 1.2em 1em 1em 1em;
+  align-items: flex-start;
 }
 
-.filters fieldset
-{
-  border: 1px solid #ddd;
-  border-radius: 0.5em;
-  padding: 0.5rem;
-  transition: all 0.3s ease;
+.filters fieldset {
+  border: 1px solid #e0e0e0;
+  border-radius: 0.75em;
+  padding: 0.75em 1em 1em 1em;
+  min-width: 220px;
+  max-width: 320px;
+  flex: 1 1 220px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  margin-bottom: 0.5em;
+  transition: box-shadow 0.2s, background 0.2s;
 }
 
-.filters fieldset.collapsed > *:not(legend)
-{
+.filters fieldset:not(.collapsed):hover,
+.filters fieldset:not(.collapsed):focus-within {
+  box-shadow: 0 2px 12px rgba(52, 168, 83, 0.10);
+  background: #f1f3f4;
+}
+
+.filters fieldset.collapsed > *:not(legend) {
   display: none;
 }
 
-.filters fieldset legend
-{
+.filters fieldset legend {
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  padding: 0.4em 0.8em;
   user-select: none;
-}
-
-.filters fieldset legend:hover
-{
+  font-weight: 600;
+  font-size: 1.1em;
+  color: #34a853;
   background: #f1f3f4;
-  border-radius: 4px;
+  border-radius: 0.5em;
+  margin-bottom: 0.5em;
+  transition: background 0.2s, color 0.2s;
+  border: none;
+  outline: none;
 }
 
-.filters fieldset legend::after
-{
+.filters fieldset legend:hover,
+.filters fieldset legend:focus {
+  background: #e6f4ea;
+  color: #188038;
+}
+
+.filters fieldset legend::after {
   content: '▼';
-  margin-left: 0.5rem;
-  font-size: 0.8em;
-  transition: transform 0.3s ease;
+  margin-left: 0.7em;
+  font-size: 0.9em;
+  transition: transform 0.3s;
 }
 
-.filters fieldset.collapsed legend::after
-{
+.filters fieldset.collapsed legend::after {
   transform: rotate(-90deg);
 }
 
 .filters select,
-.filters input
-{
+.filters input {
   width: 100%;
-  margin: 0.25rem 0;
+  margin: 0.4em 0 0.7em 0;
+  padding: 0.5em 0.7em;
+  border: 1px solid #dadce0;
+  border-radius: 0.4em;
+  background: #f8fafc;
+  font-size: 1em;
+  transition: border 0.2s, box-shadow 0.2s;
 }
 
-.filters button[type="submit"]
-{
+.filters select:focus,
+.filters input:focus {
+  border: 1.5px solid #34a853;
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 2px #e6f4ea;
+}
+
+.filters .flex-row {
+  gap: 0.5em;
+  align-items: center;
+}
+
+.filters select[name$="_sort"] {
+  width: auto;
+  min-width: 90px;
+  background: #e6f4ea;
+  color: #188038;
+  border: 1px solid #b7e1cd;
+  font-weight: 500;
+  margin-left: 0.5em;
+  transition: background 0.2s, color 0.2s;
+}
+
+.filters select[name$="_sort"]:focus {
+  background: #c8f0d6;
+  color: #0b6623;
+}
+
+.filters button[type="submit"] {
   grid-column: 1 / -2;
   padding: 0.5rem;
   background: #007bff;
@@ -246,15 +304,13 @@ tr:hover td
   cursor: pointer;
 }
 
-.filters button[type="button"]
-{
+.filters button[type="button"] {
   padding: 0.25rem;
   margin-left: 0.5rem;
   cursor: pointer;
 }
 
-.export-btn
-{
+.export-btn {
   grid-column: 1 / -1;
   padding: 0.5rem 1rem;
   background: #34a853;
@@ -265,7 +321,163 @@ tr:hover td
   margin-bottom: 1rem;
 }
 
-.export-btn:hover
-{
+.export-btn:hover {
   background: #2d9147;
+}
+
+#install {
+  display: inline-block;
+  padding: 0.7em 1.5em;
+  background: linear-gradient(90deg, #34a853 60%, #188038 100%);
+  color: #fff;
+  font-size: 1.1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 2em;
+  box-shadow: 0 2px 8px rgba(52, 168, 83, 0.10);
+  cursor: pointer;
+  margin: 1em 0 1.5em 0;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  outline: none;
+  letter-spacing: 0.03em;
+}
+
+#install:focus,
+#install:hover {
+  background: linear-gradient(90deg, #188038 60%, #34a853 100%);
+  box-shadow: 0 4px 16px rgba(52, 168, 83, 0.18);
+  transform: translateY(-2px) scale(1.03);
+}
+
+#install[hidden] {
+  display: none !important;
+}
+
+#select_device {
+  display: inline-block;
+  padding: 0.7em 1.5em;
+  background: linear-gradient(90deg, #4285f4 60%, #0b57d0 100%);
+  color: #fff;
+  font-size: 1.1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 2em;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.10);
+  cursor: pointer;
+  margin: 1em 0 1.5em 0;
+  transition: all 0.2s, box-shadow 0.2s, transform 0.1s;
+  outline: none;
+  letter-spacing: 0.03em;
+  position: relative;
+}
+
+#select_device:focus,
+#select_device:hover {
+  background: linear-gradient(90deg, #0b57d0 60%, #4285f4 100%);
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.18);
+  transform: translateY(-2px) scale(1.03);
+}
+
+#select_device.attention {
+  animation: pulse-bluetooth 1.2s infinite;
+  border: 2px solid #4285f4;
+}
+
+@keyframes pulse-bluetooth {
+  0% {
+    box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.5);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(66, 133, 244, 0.0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.0);
+  }
+}
+
+#filterDropdown {
+  display: block;
+  padding: 0.2em 1em;
+  margin-bottom: 0.8em;
+  background: #f8fafc;
+  border: none;
+  border-radius: 2em;
+  box-shadow: 0 1px 4px rgba(52, 168, 83, 0.07);
+  width: max-content;
+  min-width: 180px;
+  max-width: 100%;
+  font-size: 1em;
+  outline: none;
+  appearance: none;
+  white-space: normal;
+  height: auto;
+}
+
+#filterDropdown[multiple] {
+  min-height: 2.2em;
+  max-height: 7em;
+  overflow-y: auto;
+}
+
+#filterDropdown option {
+  display: block;
+  background: #e6f4ea;
+  color: #188038;
+  border-radius: 2em;
+  padding: 0.2em 1em;
+  margin: 0.1em 0.2em 0.1em 0;
+  font-weight: 500;
+  border: 1px solid #b7e1cd;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  white-space: normal;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  font-size: 0.98em;
+}
+
+#filterDropdown option:checked,
+#filterDropdown option[selected] {
+  background: #34a853;
+  color: #fff;
+  border: 1.5px solid #188038;
+}
+
+/* Ensure .filters and #filterDropdown are always full width and not inside scrollable container */
+.filters,
+#filterDropdown,
+#filterDropdownLabel {
+  width: 100%;
+  z-index: 2;
+}
+
+#filtersWrapper {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 1em auto;
+  background: #fafbfa;
+  border-radius: 1.2em;
+  box-shadow: 0 2px 12px rgba(52, 168, 83, 0.04);
+  padding: 1.2em 1.5em 1em 1.5em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+#filterDropdownLabel {
+  margin-bottom: 0.2em;
+  font-size: 1.05em;
+}
+
+#DATA_VIEW {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.5em;
 }
