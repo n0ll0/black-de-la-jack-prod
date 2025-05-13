@@ -1,13 +1,12 @@
 // Basic service worker for offline support
 const CACHE_NAME = 'bdlj-cache-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/index.js',
-  '/static/styles.css',
-  '/static/Black de la Jack.svg',
-  '/static/bluetooth.svg',
-  '/static/site.webmanifest',
+  './index.html',
+  './index.js',
+  './static/styles.css',
+  './static/Black de la Jack.svg',
+  './static/bluetooth.svg',
+  './static/site.webmanifest',
 ];
 
 self.addEventListener('install', event => {
