@@ -481,10 +481,7 @@ async function loadFromIndexedDB() {
   createFilterControls(records[0] || defaultDataStructure);
   applyFiltersAndSort(false);
   if (records.length > 0) {
-    document.querySelector('.comment').style.display = 'block';
     globalThis.offset = 0; // Reset offset when loading fresh data
-  } else {
-    document.querySelector('.comment').style.display = 'block';
   }
 }
 
@@ -899,14 +896,18 @@ async function applyFiltersAndSort(loadMore = false) {
   // Only increment offset if we have more records to show
   if (sortedAndFilteredRecords.length > 0) {
     globalThis.offset = offset + sortedAndFilteredRecords.length;
-    document.querySelector('.comment').style.display = 'none';
     loadingIndicator.dispatchEvent(new Event(sortedAndFilteredRecords.length >= limit ? 'ended' : 'waiting'));
 
     sortedAndFilteredRecords.forEach(record => addRow(tbody, record));
   } else {
-    document.querySelector('.comment').style.display = 'block';
     loadingIndicator.dispatchEvent(new Event('ended'));
     // loadingIndicator.style.display = 'none';
+  }
+
+  if (!tbody.querySelector('td')) {
+    tbody.querySelector('.placeholder').style.display = 'block';
+  } else {
+    tbody.querySelector('.placeholder').style.display = 'none';
   }
 }
 
