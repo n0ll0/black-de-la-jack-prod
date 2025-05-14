@@ -6,7 +6,7 @@ const urlsToCache = [
   './static/styles.css',
   './static/Black de la Jack.svg',
   './static/bluetooth.svg',
-  './static/site.webmanifest',
+  './site.webmanifest',
 ];
 
 self.addEventListener('install', event => {
