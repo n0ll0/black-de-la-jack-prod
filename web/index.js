@@ -893,10 +893,12 @@ async function applyFiltersAndSort(loadMore = false) {
   // Only increment offset if we have more records to show
   if (sortedAndFilteredRecords.length > 0) {
     globalThis.offset = offset + sortedAndFilteredRecords.length;
+    document.querySelector('.comment').style.display = 'none';
     loadingIndicator.dispatchEvent(new Event(sortedAndFilteredRecords.length >= limit ? 'ended' : 'waiting'));
 
     sortedAndFilteredRecords.forEach(record => addRow(tbody, record));
   } else {
+    document.querySelector('.comment').style.display = 'block';
     loadingIndicator.dispatchEvent(new Event('ended'));
     // loadingIndicator.style.display = 'none';
   }
