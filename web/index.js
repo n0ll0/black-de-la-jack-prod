@@ -803,6 +803,9 @@ function applyFilters(records, filters) {
       } else if (typeof record[field] === 'number') {
         value = Number(value);
         filterValue = Number(filterValue);
+      } else {
+        value = String(value);
+        filterValue = String(filterValue);
       }
 
       switch (conditions.operator) {
