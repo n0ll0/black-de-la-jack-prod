@@ -7,8 +7,8 @@ const defaultDataStructure = {
   humidity: Math.random(),
   co2: Math.random(),
   mq2: Math.random(),
-  pm2_5: Math.random(),
-  pm10: Math.random(),
+  // pm2_5: Math.random(),
+  // pm10: Math.random(),
 };
 
 globalThis.offset = 0;
@@ -353,8 +353,8 @@ async function saveRandomData() {
     humidity: Math.random(),
     co2: Math.random(),
     mq2: Math.random(),
-    pm2_5: Math.random(),
-    pm10: Math.random(),
+    // pm2_5: Math.random(),
+    // pm10: Math.random(),
     date: new Date().toISOString(),
   };
 
@@ -904,10 +904,12 @@ async function applyFiltersAndSort(loadMore = false) {
     // loadingIndicator.style.display = 'none';
   }
 
+  // Show/hide placeholder based on table content
+  const placeholder = document.getElementById('table-placeholder');
   if (!tbody.querySelector('td')) {
-    document.querySelector('.placeholder').style.display = 'block';
+    if (placeholder) placeholder.style.display = 'block';
   } else {
-    document.querySelector('.placeholder').style.display = 'none';
+    if (placeholder) placeholder.style.display = 'none';
   }
 }
 
