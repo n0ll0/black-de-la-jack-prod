@@ -481,7 +481,10 @@ async function loadFromIndexedDB() {
   createFilterControls(records[0] || defaultDataStructure);
   applyFiltersAndSort(false);
   if (records.length > 0) {
+    document.querySelector('.comment').style.display = 'block';
     globalThis.offset = 0; // Reset offset when loading fresh data
+  } else {
+    document.querySelector('.comment').style.display = 'block';
   }
 }
 
