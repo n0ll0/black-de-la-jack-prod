@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM fully loaded and parsed');
   if (!tbody || !thead) return;
   document.querySelector('#TABLE').after(loadingIndicator);
-  document.querySelector('#TABLE').after(ExportAsCSVButtonElement());
+  document.querySelector('#DATA_VIEW').after(ExportAsCSVButtonElement());
   document.body.querySelector('main').appendChild(ResetDB);
 
 
