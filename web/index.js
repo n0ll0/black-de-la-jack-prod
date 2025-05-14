@@ -619,7 +619,7 @@ function createFilterControls(data) {
     });
   });
 
-  document.querySelectorAll('#filterDropdown option').forEach((el=>{
+  document.querySelectorAll('#filterDropdown option').forEach((el => {
     el.checked = false;
     el.selected = false;
   }));
@@ -643,8 +643,12 @@ function createFilterControls(data) {
     const legend = document.createElement('legend');
     legend.textContent = key.charAt(0).toUpperCase() + key.slice(1);
     // Expand the first filter by default
-    if (idx === 0) fieldset.classList.remove('collapsed');
-    else fieldset.classList.add('collapsed');
+    if (idx === 0) {
+      fieldset.classList.remove('collapsed');
+    }
+    else {
+      fieldset.classList.add('collapsed');
+    }
 
     legend.addEventListener('click', (e) => {
       fieldset.classList.toggle('collapsed');
@@ -731,7 +735,6 @@ function createFilterControls(data) {
   // Initial visibility sync
   filterDropdown.dispatchEvent(new Event('change'));
 
-  
   // Insert label, dropdown, and filter form into the filtersWrapper
   filtersWrapper.appendChild(filterLabel);
   filtersWrapper.appendChild(filterDropdown);
