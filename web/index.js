@@ -589,6 +589,7 @@ function createFilterControls(data) {
   filterLabel.title = 'Select which columns to show filters for';
 
   // Remove old dropdown if present
+  /** @type {HTMLSelectElement} */
   let filterDropdown = document.getElementById('filterDropdown');
   if (filterDropdown) filterDropdown.remove();
 
@@ -617,6 +618,11 @@ function createFilterControls(data) {
       fs.style.display = selected.includes(fs.dataset.key) ? '' : 'none';
     });
   });
+
+  document.querySelectorAll('#filterDropdown option').forEach((el=>{
+    el.checked = false;
+    el.selected = false;
+  }));
 
   // Insert filtersWrapper before the scrollable table container
   const tableScrollContainer = document.querySelector('.table-scroll-x');
