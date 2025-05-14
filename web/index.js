@@ -905,9 +905,9 @@ async function applyFiltersAndSort(loadMore = false) {
   }
 
   if (!tbody.querySelector('td')) {
-    tbody.querySelector('.placeholder').style.display = 'block';
+    document.querySelector('.placeholder').style.display = 'block';
   } else {
-    tbody.querySelector('.placeholder').style.display = 'none';
+    document.querySelector('.placeholder').style.display = 'none';
   }
 }
 
