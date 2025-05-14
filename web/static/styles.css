@@ -379,7 +379,7 @@ tr:hover td {
 }
 
 #select_device.attention {
-  animation: pulse-bluetooth 1.2s infinite;
+  animation: pulse-bluetooth 3s infinite;
   border: 2px solid #4285f4;
 }
 
@@ -388,11 +388,11 @@ tr:hover td {
     box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.5);
   }
 
-  50% {
+  20% {
     box-shadow: 0 0 0 10px rgba(66, 133, 244, 0.0);
   }
 
-  70% {
+  25% {
     box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.0);
   }
 
